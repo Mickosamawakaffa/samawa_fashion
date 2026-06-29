@@ -45,7 +45,7 @@ class PaymentController extends Controller
 
         Payment::create([
             'order_id' => $order->id,
-            'amount' => $order->total_amount,
+            'amount' => $order->total_price,
             'payment_method' => $order->payment_method,
             'proof_image' => $proofImagePath,
             'status' => 'pending',

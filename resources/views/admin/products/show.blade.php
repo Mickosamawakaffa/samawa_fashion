@@ -17,13 +17,13 @@
                 <i class="fas fa-image me-2"></i> Gambar Produk
             </div>
             <div class="card-body">
-                <img src="{{ asset('storage/' . $product->main_image) }}" alt="{{ $product->name }}" class="img-fluid mb-3">
+                <img src="{{ $product->image ? Storage::url($product->image) : asset('images/no-image.jpg') }}" alt="{{ $product->name }}" class="img-fluid mb-3" style="max-height: 350px; object-fit: cover;">
                 @if($product->images->count() > 0)
                     <h6 class="mt-3">Galeri</h6>
                     <div class="row">
                         @foreach($product->images as $image)
                             <div class="col-4 mb-2">
-                                <img src="{{ asset('storage/' . $image->image_path) }}" alt="Gallery" class="img-thumbnail">
+                                <img src="{{ Storage::url($image->image) }}" alt="Gallery" class="img-thumbnail" style="height: 100px; object-fit: cover;">
                             </div>
                         @endforeach
                     </div>

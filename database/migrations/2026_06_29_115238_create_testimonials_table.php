@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('testimonials', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('product_id')->nullable()->constrained()->onDelete('set null');
             $table->string('name');
+            $table->string('role')->nullable();
             $table->integer('rating')->default(5);
-            $table->text('review');
+            $table->text('message');
             $table->string('avatar')->nullable();
             $table->boolean('is_approved')->default(false);
             $table->timestamps();

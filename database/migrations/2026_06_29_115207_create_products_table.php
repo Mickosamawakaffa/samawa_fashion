@@ -23,7 +23,8 @@ return new class extends Migration
             $table->decimal('weight', 8, 2)->default(0);
             $table->json('sizes')->nullable();
             $table->json('colors')->nullable();
-            $table->string('main_image');
+            $table->string('image');
+            $table->boolean('is_featured')->default(false);
             $table->boolean('is_active')->default(true);
             $table->boolean('is_best_seller')->default(false);
             $table->boolean('is_new_arrival')->default(false);

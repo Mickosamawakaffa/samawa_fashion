@@ -30,7 +30,7 @@
                         <div class="mb-4">
                             <strong>Total yang harus dibayar:</strong>
                             <h3 class="text-gold" style="color: var(--gold-color);">
-                                Rp {{ number_format($order->total_amount, 0, ',', '.') }}
+                                Rp {{ number_format($order->total_price, 0, ',', '.') }}
                             </h3>
                         </div>
                     </div>

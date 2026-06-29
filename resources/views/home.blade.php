@@ -26,8 +26,12 @@
         <div class="row">
             @foreach($categories as $category)
                 <div class="col-md-4 col-sm-6 mb-4" data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}">
-                    <div class="category-card">
-                        <img src="{{ $category->image ?? 'https://via.placeholder.com/400x300?text=' . $category->name }}" alt="{{ $category->name }}">
+                    <div class="category-card" onclick="window.location.href='{{ route('products.index', ['category' => $category->id]) }}'">
+                        @if($category->image)
+                            <img src="{{ asset('storage/' . $category->image) }}" alt="{{ $category->name }}">
+                        @else
+                            <img src="https://via.placeholder.com/400x300?text={{ urlencode($category->name) }}" alt="{{ $category->name }}">
+                        @endif
                         <div class="category-overlay">
                             <h3 class="category-name">{{ $category->name }}</h3>
                         </div>
@@ -48,33 +52,44 @@
         <div class="row">
             @foreach($newProducts as $product)
                 <div class="col-lg-3 col-md-4 col-sm-6 mb-4" data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}">
-                    <div class="product-card">
-                        <div class="product-image">
-                            <img src="{{ $product->main_image ?? 'https://via.placeholder.com/400x500?text=' . $product->name }}" alt="{{ $product->name }}">
-                            @if($product->is_new_arrival)
-                                <span class="product-badge">New</span>
-                            @endif
+                    <div class="product-card" style="position: relative; overflow: visible;">
+                        <div class="product-image" style="position: relative; overflow: hidden; height: 300px; border-radius: 10px 10px 0 0;">
+                            <img src="{{ $product->image ? Storage::url($product->image) : asset('images/no-image.jpg') }}" alt="{{ $product->name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
+                            
+                            <!-- Badges Stack -->
+                            <div class="product-badge-container">
+                                @if($product->stock == 0)
+                                    <span class="product-badge bg-secondary text-white">Stok Habis</span>
+                                @endif
+                                @if($product->discount > 0)
+                                    <span class="product-badge bg-danger text-white">Diskon {{ $product->discount }}%</span>
+                                @endif
+                                @if($product->is_new_arrival)
+                                    <span class="product-badge">New</span>
+                                @endif
+                            </div>
+                            
                             <div class="product-actions">
-                                <button onclick="addToWishlist({{ $product->id }})" title="Add to Wishlist">
-                                    <i class="fas fa-heart"></i>
+                                <button onclick="toggleWishlist({{ $product->id }}, this)" title="Add to Wishlist" {{ $product->stock == 0 ? 'disabled' : '' }}>
+                                    <i class="{{ auth()->check() && auth()->user()->wishlist->contains('product_id', $product->id) ? 'fas' : 'far' }} fa-heart text-danger"></i>
                                 </button>
-                                <button onclick="addToCart({{ $product->id }})" title="Add to Cart">
+                                <button onclick="addToCart({{ $product->id }})" title="Add to Cart" {{ $product->stock == 0 ? 'disabled' : '' }}>
                                     <i class="fas fa-shopping-cart"></i>
                                 </button>
-                                <a href="{{ route('products.show', $product->slug) }}" class="btn btn-gold" style="width: auto; border-radius: 20px; padding: 8px 20px;">
+                                <a href="{{ route('products.show', $product->slug) }}" class="btn btn-gold" style="width: auto; border-radius: 20px; padding: 8px 20px; font-size: 0.85rem; font-weight: 600;">
                                     Detail
                                 </a>
                             </div>
                         </div>
-                        <div class="product-info">
-                            <p class="product-category">{{ $product->category->name }}</p>
+                        <div class="product-info" style="padding: 20px; background: white; border-radius: 0 0 10px 10px;">
+                            <p class="product-category" style="color: var(--gray-color); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">{{ $product->category->name }}</p>
                             <a href="{{ route('products.show', $product->slug) }}">
-                                <h5 class="product-name">{{ $product->name }}</h5>
+                                <h5 class="product-name text-truncate" style="font-size: 1.1rem; font-weight: 600; color: var(--primary-color); margin-bottom: 10px; transition: all 0.3s ease;">{{ $product->name }}</h5>
                             </a>
-                            <div class="product-price">
+                            <div class="product-price" style="font-size: 1.2rem; font-weight: 700; color: var(--gold-color);">
                                 Rp {{ number_format($product->final_price, 0, ',', '.') }}
                                 @if($product->discount > 0)
-                                    <span class="product-old-price">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
+                                    <span class="product-old-price" style="text-decoration: line-through; color: var(--gray-color); font-size: 0.9rem; margin-left: 10px;">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
                                 @endif
                             </div>
                         </div>
@@ -98,33 +113,44 @@
         <div class="row">
             @foreach($bestSellers as $product)
                 <div class="col-lg-3 col-md-4 col-sm-6 mb-4" data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}">
-                    <div class="product-card">
-                        <div class="product-image">
-                            <img src="{{ $product->main_image ?? 'https://via.placeholder.com/400x500?text=' . $product->name }}" alt="{{ $product->name }}">
-                            @if($product->is_best_seller)
-                                <span class="product-badge">Best Seller</span>
-                            @endif
+                    <div class="product-card" style="position: relative; overflow: visible;">
+                        <div class="product-image" style="position: relative; overflow: hidden; height: 300px; border-radius: 10px 10px 0 0;">
+                            <img src="{{ $product->image ? Storage::url($product->image) : asset('images/no-image.jpg') }}" alt="{{ $product->name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
+                            
+                            <!-- Badges Stack -->
+                            <div class="product-badge-container">
+                                @if($product->stock == 0)
+                                    <span class="product-badge bg-secondary text-white">Stok Habis</span>
+                                @endif
+                                @if($product->discount > 0)
+                                    <span class="product-badge bg-danger text-white">Diskon {{ $product->discount }}%</span>
+                                @endif
+                                @if($product->is_best_seller)
+                                    <span class="product-badge">Best Seller</span>
+                                @endif
+                            </div>
+                            
                             <div class="product-actions">
-                                <button onclick="addToWishlist({{ $product->id }})" title="Add to Wishlist">
-                                    <i class="fas fa-heart"></i>
+                                <button onclick="toggleWishlist({{ $product->id }}, this)" title="Add to Wishlist" {{ $product->stock == 0 ? 'disabled' : '' }}>
+                                    <i class="{{ auth()->check() && auth()->user()->wishlist->contains('product_id', $product->id) ? 'fas' : 'far' }} fa-heart text-danger"></i>
                                 </button>
-                                <button onclick="addToCart({{ $product->id }})" title="Add to Cart">
+                                <button onclick="addToCart({{ $product->id }})" title="Add to Cart" {{ $product->stock == 0 ? 'disabled' : '' }}>
                                     <i class="fas fa-shopping-cart"></i>
                                 </button>
-                                <a href="{{ route('products.show', $product->slug) }}" class="btn btn-gold" style="width: auto; border-radius: 20px; padding: 8px 20px;">
+                                <a href="{{ route('products.show', $product->slug) }}" class="btn btn-gold" style="width: auto; border-radius: 20px; padding: 8px 20px; font-size: 0.85rem; font-weight: 600;">
                                     Detail
                                 </a>
                             </div>
                         </div>
-                        <div class="product-info">
-                            <p class="product-category">{{ $product->category->name }}</p>
+                        <div class="product-info" style="padding: 20px; background: white; border-radius: 0 0 10px 10px;">
+                            <p class="product-category" style="color: var(--gray-color); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">{{ $product->category->name }}</p>
                             <a href="{{ route('products.show', $product->slug) }}">
-                                <h5 class="product-name">{{ $product->name }}</h5>
+                                <h5 class="product-name text-truncate" style="font-size: 1.1rem; font-weight: 600; color: var(--primary-color); margin-bottom: 10px; transition: all 0.3s ease;">{{ $product->name }}</h5>
                             </a>
-                            <div class="product-price">
+                            <div class="product-price" style="font-size: 1.2rem; font-weight: 700; color: var(--gold-color);">
                                 Rp {{ number_format($product->final_price, 0, ',', '.') }}
                                 @if($product->discount > 0)
-                                    <span class="product-old-price">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
+                                    <span class="product-old-price" style="text-decoration: line-through; color: var(--gray-color); font-size: 0.9rem; margin-left: 10px;">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
                                 @endif
                             </div>
                         </div>
@@ -146,7 +172,7 @@
             @foreach($testimonials as $testimonial)
                 <div class="col-lg-4 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}">
                     <div class="testimonial-card">
-                        <img src="{{ $testimonial->avatar ?? 'https://via.placeholder.com/100' }}" alt="{{ $testimonial->name }}" class="testimonial-avatar">
+                        <img src="{{ $testimonial->avatar ?? 'https://via.placeholder.com/100?text=' . urlencode($testimonial->name) }}" alt="{{ $testimonial->name }}" class="testimonial-avatar">
                         <div class="testimonial-rating">
                             @for($i = 1; $i <= 5; $i++)
                                 @if($i <= $testimonial->rating)
@@ -156,8 +182,9 @@
                                 @endif
                             @endfor
                         </div>
-                        <p class="testimonial-text">"{{ $testimonial->review }}"</p>
+                        <p class="testimonial-text">"{{ $testimonial->message }}"</p>
                         <h5 class="testimonial-name">{{ $testimonial->name }}</h5>
+                        <small class="text-muted d-block mt-1">{{ $testimonial->role ?? 'Customer' }}</small>
                     </div>
                 </div>
             @endforeach

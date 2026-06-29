@@ -34,18 +34,45 @@ class RegisteredUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'phone' => ['required', 'string', 'max:20'],
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'phone' => $request->phone,
+            'role' => 'user',
         ]);
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        // Merge session cart to DB cart upon registration
+        $sessionCart = session()->get('cart', []);
+        if (!empty($sessionCart)) {
+            foreach ($sessionCart as $productId => $quantity) {
+                $cartItem = \App\Models\Cart::where('user_id', $user->id)
+                    ->where('product_id', $productId)
+                    ->first();
+                if ($cartItem) {
+                    $cartItem->increment('quantity', $quantity);
+                } else {
+                    \App\Models\Cart::create([
+                        'user_id' => $user->id,
+                        'product_id' => $productId,
+                        'quantity' => $quantity,
+                    ]);
+                }
+            }
+            session()->forget('cart');
+        }
+
+        if ($user->isAdmin()) {
+            return redirect(route('admin.dashboard'));
+        }
+
+        return redirect('/');
     }
 }

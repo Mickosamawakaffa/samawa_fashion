@@ -13,16 +13,20 @@ class Order extends Model
         'user_id',
         'order_code',
         'status',
-        'total_amount',
+        'total_price',
+        'recipient_name',
         'shipping_address',
+        'city',
+        'postal_code',
         'phone',
         'payment_method',
+        'payment_status',
         'shipped_at',
         'completed_at',
     ];
 
     protected $casts = [
-        'total_amount' => 'decimal:2',
+        'total_price' => 'decimal:2',
         'shipped_at' => 'datetime',
         'completed_at' => 'datetime',
     ];

@@ -164,7 +164,7 @@
                                         <td>{{ $order->order_code }}</td>
                                         <td>{{ $order->user->name }}</td>
                                         <td>{{ $order->created_at->format('d M Y H:i') }}</td>
-                                        <td>Rp {{ number_format($order->total_amount, 0, ',', '.') }}</td>
+                                        <td>Rp {{ number_format($order->total_price, 0, ',', '.') }}</td>
                                         <td>
                                             <span class="badge-status badge-{{ $order->status }}">
                                                 {{ ucfirst($order->status) }}

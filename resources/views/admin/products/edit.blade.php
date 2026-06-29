@@ -118,8 +118,8 @@
                         @error('main_image')
                             <div class="text-danger small">{{ $message }}</div>
                         @enderror
-                        @if($product->main_image)
-                            <img src="{{ asset('storage/' . $product->main_image) }}" alt="Current Image" class="img-thumbnail mt-2" style="max-width: 200px;">
+                        @if($product->image)
+                            <img src="{{ Storage::url($product->image) }}" alt="Current Image" class="img-thumbnail mt-2" style="max-width: 200px;">
                         @endif
                     </div>
                     
@@ -133,7 +133,7 @@
                             <div class="row mt-2">
                                 @foreach($product->images as $image)
                                     <div class="col-4 mb-2">
-                                        <img src="{{ asset('storage/' . $image->image_path) }}" alt="Gallery" class="img-thumbnail" style="max-width: 100%;">
+                                        <img src="{{ Storage::url($image->image) }}" alt="Gallery" class="img-thumbnail" style="max-width: 100%; height: 100px; object-fit: cover;">
                                     </div>
                                 @endforeach
                             </div>

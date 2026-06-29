@@ -129,8 +129,10 @@
         }
         
         .badge-pending { background-color: #ffc107; color: #000; }
+        .badge-processing { background-color: #17a2b8; color: #fff; }
         .badge-processed { background-color: #17a2b8; color: #fff; }
         .badge-shipped { background-color: #007bff; color: #fff; }
+        .badge-delivered { background-color: #28a745; color: #fff; }
         .badge-completed { background-color: #28a745; color: #fff; }
         .badge-cancelled { background-color: #dc3545; color: #fff; }
     </style>
@@ -158,7 +160,10 @@
                         <i class="fas fa-shopping-cart"></i> Pesanan
                     </a>
                     <a class="nav-link {{ request()->routeIs('admin.customers.*') ? 'active' : '' }}" href="{{ route('admin.customers.index') }}">
-                        <i class="fas fa-users"></i> Customer
+                        <i class="fas fa-users"></i> User / Customer
+                    </a>
+                    <a class="nav-link {{ request()->routeIs('admin.testimonials.*') ? 'active' : '' }}" href="{{ route('admin.testimonials.index') }}">
+                        <i class="fas fa-comment-dots"></i> Testimoni
                     </a>
                     <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}">
                         <i class="fas fa-chart-bar"></i> Laporan

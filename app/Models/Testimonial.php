@@ -13,8 +13,9 @@ class Testimonial extends Model
         'user_id',
         'product_id',
         'name',
+        'role',
         'rating',
-        'review',
+        'message',
         'avatar',
         'is_approved',
     ];

@@ -9,6 +9,8 @@ use App\Models\ProductImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class ProductController extends Controller
 {
@@ -36,15 +38,17 @@ class ProductController extends Controller
             'weight' => 'required|numeric|min:0',
             'sizes' => 'nullable|array',
             'colors' => 'nullable|array',
-            'main_image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'main_image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'is_active' => 'boolean',
             'is_best_seller' => 'boolean',
             'is_new_arrival' => 'boolean',
+            'is_featured' => 'boolean',
         ]);
 
-        $mainImagePath = $request->file('main_image')->store('products', 'public');
+        // Compress and store main image
+        $mainImagePath = $this->compressAndStore($request->file('main_image'));
 
         $product = Product::create([
             'name' => $request->name,
@@ -57,19 +61,19 @@ class ProductController extends Controller
             'weight' => $request->weight,
             'sizes' => $request->sizes,
             'colors' => $request->colors,
-            'main_image' => $mainImagePath,
+            'image' => $mainImagePath, // Correct database column listing
             'is_active' => $request->is_active ?? true,
             'is_best_seller' => $request->is_best_seller ?? false,
             'is_new_arrival' => $request->is_new_arrival ?? false,
+            'is_featured' => $request->is_featured ?? false,
         ]);
 
         if ($request->has('images')) {
-            foreach ($request->file('images') as $index => $image) {
-                $imagePath = $image->store('products', 'public');
+            foreach ($request->file('images') as $imageFile) {
+                $imagePath = $this->compressAndStore($imageFile);
                 ProductImage::create([
                     'product_id' => $product->id,
-                    'image_path' => $imagePath,
-                    'is_primary' => $index === 0,
+                    'image' => $imagePath, // Correct column mapping
                 ]);
             }
         }
@@ -102,12 +106,13 @@ class ProductController extends Controller
             'weight' => 'required|numeric|min:0',
             'sizes' => 'nullable|array',
             'colors' => 'nullable|array',
-            'main_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'main_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'is_active' => 'boolean',
             'is_best_seller' => 'boolean',
             'is_new_arrival' => 'boolean',
+            'is_featured' => 'boolean',
         ]);
 
         $data = [
@@ -124,24 +129,21 @@ class ProductController extends Controller
             'is_active' => $request->is_active ?? true,
             'is_best_seller' => $request->is_best_seller ?? false,
             'is_new_arrival' => $request->is_new_arrival ?? false,
+            'is_featured' => $request->is_featured ?? false,
         ];
 
         if ($request->hasFile('main_image')) {
-            if ($product->main_image) {
-                Storage::disk('public')->delete($product->main_image);
-            }
-            $data['main_image'] = $request->file('main_image')->store('products', 'public');
+            $data['image'] = $this->compressAndStore($request->file('main_image'));
         }
 
         $product->update($data);
 
         if ($request->has('images')) {
-            foreach ($request->file('images') as $index => $image) {
-                $imagePath = $image->store('products', 'public');
+            foreach ($request->file('images') as $imageFile) {
+                $imagePath = $this->compressAndStore($imageFile);
                 ProductImage::create([
                     'product_id' => $product->id,
-                    'image_path' => $imagePath,
-                    'is_primary' => false,
+                    'image' => $imagePath, // Correct column mapping
                 ]);
             }
         }
@@ -151,17 +153,34 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
-        if ($product->main_image) {
-            Storage::disk('public')->delete($product->main_image);
-        }
-
-        foreach ($product->images as $image) {
-            Storage::disk('public')->delete($image->image_path);
-            $image->delete();
-        }
-
+        // Eloquent handles SoftDeletes. Do NOT delete files from storage during soft deletes.
         $product->delete();
 
-        return redirect()->route('admin.products.index')->with('success', 'Produk berhasil dihapus');
+        return redirect()->route('admin.products.index')->with('success', 'Produk berhasil dinonaktifkan (soft delete)');
+    }
+
+    /**
+     * Compress image using Intervention Image Manager v3
+     */
+    private function compressAndStore($file)
+    {
+        $filename = 'prod-' . uniqid() . '-' . time() . '.jpg';
+        
+        $manager = new ImageManager(new Driver());
+        $image = $manager->read($file);
+        
+        if ($image->width() > 800) {
+            $image->scale(width: 800);
+        }
+        
+        $destDir = storage_path('app/public/products');
+        if (!file_exists($destDir)) {
+            mkdir($destDir, 0755, true);
+        }
+        
+        // Save as JPEG with 80% quality
+        $image->toJpeg(80)->save($destDir . '/' . $filename);
+        
+        return 'products/' . $filename;
     }
 }

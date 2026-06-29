@@ -58,9 +58,9 @@ class User extends Authenticatable
         return $this->hasMany(Wishlist::class);
     }
 
-    public function cart()
+    public function carts()
     {
-        return $this->hasOne(Cart::class);
+        return $this->hasMany(Cart::class);
     }
 
     public function orders()
@@ -71,6 +71,11 @@ class User extends Authenticatable
     public function testimonials()
     {
         return $this->hasMany(Testimonial::class);
+    }
+
+    public function addresses()
+    {
+        return $this->hasMany(Address::class);
     }
 
     public function isAdmin()

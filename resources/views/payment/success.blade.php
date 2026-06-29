@@ -49,7 +49,7 @@
                             <div class="col-md-6">
                                 <strong>Total Pembayaran:</strong>
                                 <p class="text-gold" style="color: var(--gold-color);">
-                                    Rp {{ number_format($order->total_amount, 0, ',', '.') }}
+                                    Rp {{ number_format($order->total_price, 0, ',', '.') }}
                                 </p>
                             </div>
                         </div>

@@ -28,7 +28,33 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $user = auth()->user();
+
+        // Merge session cart to DB cart upon successful login
+        $sessionCart = session()->get('cart', []);
+        if (!empty($sessionCart)) {
+            foreach ($sessionCart as $productId => $quantity) {
+                $cartItem = \App\Models\Cart::where('user_id', $user->id)
+                    ->where('product_id', $productId)
+                    ->first();
+                if ($cartItem) {
+                    $cartItem->increment('quantity', $quantity);
+                } else {
+                    \App\Models\Cart::create([
+                        'user_id' => $user->id,
+                        'product_id' => $productId,
+                        'quantity' => $quantity,
+                    ]);
+                }
+            }
+            session()->forget('cart');
+        }
+
+        if ($user->isAdmin()) {
+            return redirect()->intended(route('admin.dashboard'));
+        }
+
+        return redirect()->intended('/');
     }
 
     /**

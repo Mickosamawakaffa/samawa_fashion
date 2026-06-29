@@ -20,6 +20,9 @@
     <!-- SweetAlert2 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     
+    <!-- Alpine.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
     <style>
         :root {
             --primary-color: #0A0A0A;
@@ -96,6 +99,7 @@
             padding: 2px 6px;
             font-size: 0.7rem;
             font-weight: 600;
+            margin-left: 2px;
         }
         
         /* Hero Section */
@@ -227,10 +231,17 @@
             transform: scale(1.1);
         }
         
-        .product-badge {
+        .product-badge-container {
             position: absolute;
             top: 15px;
             left: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 2;
+        }
+        
+        .product-badge {
             padding: 5px 15px;
             background-color: var(--gold-color);
             color: var(--primary-color);
@@ -238,23 +249,97 @@
             font-size: 0.8rem;
             text-transform: uppercase;
             border-radius: 0;
+            display: inline-block;
+            width: fit-content;
+        }
+        
+        .product-badge.bg-danger {
+            background-color: #dc3545 !important;
+            color: #fff !important;
+        }
+        
+        .product-badge.bg-secondary {
+            background-color: #6c757d !important;
+            color: #fff !important;
         }
         
         .product-actions {
             position: absolute;
-            bottom: -50px;
+            bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(10, 10, 10, 0.9);
+            background: rgba(10, 10, 10, 0.75);
             padding: 15px;
             display: flex;
             justify-content: center;
             gap: 10px;
-            transition: all 0.3s ease;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
         
         .product-card:hover .product-actions {
-            bottom: 0;
+            opacity: 1;
+        }
+        
+        .product-actions button:disabled {
+            background-color: #555555 !important;
+            color: #888888 !important;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        /* Custom Pagination Styles */
+        .pagination .page-link {
+            color: var(--primary-color);
+            background-color: transparent;
+            border: 1px solid var(--primary-color);
+            padding: 8px 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .pagination .page-link:hover {
+            color: var(--primary-color);
+            background-color: var(--gold-color);
+            border-color: var(--gold-color);
+        }
+        .pagination .page-item.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--gold-color);
+            color: var(--gold-color) !important;
+        }
+        .pagination .page-item.disabled .page-link {
+            color: var(--gray-color);
+            background-color: transparent;
+            border-color: #dee2e6;
+        }
+        
+        /* Skeleton Pulse Animation */
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        .skeleton-card {
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        .skeleton-img {
+            background: #e2e8f0;
+            height: 300px;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        .skeleton-info {
+            padding: 20px;
+        }
+        .skeleton-text {
+            background: #e2e8f0;
+            height: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            animation: pulse 1.5s infinite ease-in-out;
         }
         
         .product-actions button {
@@ -485,17 +570,27 @@
                         <a class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">Produk</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#categories">Kategori</a>
+                        <a class="nav-link {{ request()->routeIs('categories.*') ? 'active' : '' }}" href="{{ route('categories.index') }}">Kategori</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#about">Tentang</a>
+                        <a class="nav-link {{ request()->routeIs('about') ? 'active' : '' }}" href="{{ route('about') }}">Tentang</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#contact">Kontak</a>
+                        <a class="nav-link {{ request()->routeIs('contact') ? 'active' : '' }}" href="{{ route('contact') }}">Kontak</a>
                     </li>
                 </ul>
-                <ul class="navbar-nav">
+                <ul class="navbar-nav align-items-center">
                     @guest
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('cart.index') }}">
+                                <i class="fas fa-shopping-cart"></i>
+                                @if(session()->has('cart') && count(session('cart')) > 0)
+                                    <span class="cart-badge" id="cart-badge-count">{{ array_sum(session('cart')) }}</span>
+                                @else
+                                    <span class="cart-badge d-none" id="cart-badge-count">0</span>
+                                @endif
+                            </a>
+                        </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('login') }}">Login</a>
                         </li>
@@ -506,22 +601,24 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('wishlist.index') }}">
                                 <i class="fas fa-heart"></i>
+                                @php $wishCount = auth()->user()->wishlist()->count(); @endphp
+                                <span class="cart-badge {{ $wishCount == 0 ? 'd-none' : '' }}" id="wishlist-badge-count">{{ $wishCount }}</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('cart.index') }}">
                                 <i class="fas fa-shopping-cart"></i>
-                                @if(auth()->user()->cart && auth()->user()->cart->items->count() > 0)
-                                    <span class="cart-badge">{{ auth()->user()->cart->items->count() }}</span>
-                                @endif
+                                @php $cartCount = auth()->user()->carts()->sum('quantity'); @endphp
+                                <span class="cart-badge {{ $cartCount == 0 ? 'd-none' : '' }}" id="cart-badge-count">{{ $cartCount }}</span>
                             </a>
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-user"></i>
+                                <i class="fas fa-user me-1"></i> {{ auth()->user()->name }}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="{{ route('profile.edit') }}">Profile</a></li>
+                                <li><a class="dropdown-item" href="{{ route('profile.edit') }}">Profil Saya</a></li>
+                                <li><a class="dropdown-item" href="{{ route('orders.index') }}">Riwayat Pesanan</a></li>
                                 @if(auth()->user()->isAdmin())
                                     <li><a class="dropdown-item" href="{{ route('admin.dashboard') }}">Admin Panel</a></li>
                                 @endif

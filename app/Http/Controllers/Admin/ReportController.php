@@ -16,29 +16,29 @@ class ReportController extends Controller
         $endDate = $request->end_date ?? now()->endOfMonth()->format('Y-m-d');
 
         $totalRevenue = Order::whereBetween('created_at', [$startDate, $endDate])
-            ->where('status', 'completed')
-            ->sum('total_amount');
+            ->where('status', 'delivered')
+            ->sum('total_price');
 
         $totalOrders = Order::whereBetween('created_at', [$startDate, $endDate])->count();
         $completedOrders = Order::whereBetween('created_at', [$startDate, $endDate])
-            ->where('status', 'completed')
+            ->where('status', 'delivered')
             ->count();
 
         $totalProducts = Product::count();
-        $totalCustomers = User::where('role', 'customer')->count();
+        $totalCustomers = User::where('role', 'user')->count();
 
         $salesByCategory = OrderItem::selectRaw('categories.name as category_name, SUM(order_items.quantity) as total_sold, SUM(order_items.price * order_items.quantity) as total_revenue')
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->join('categories', 'products.category_id', '=', 'categories.id')
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->whereBetween('orders.created_at', [$startDate, $endDate])
-            ->where('orders.status', 'completed')
+            ->where('orders.status', 'delivered')
             ->groupBy('categories.id', 'categories.name')
             ->orderByDesc('total_revenue')
             ->get();
 
-        $salesByMonth = Order::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, SUM(total_amount) as total, COUNT(*) as orders')
-            ->where('status', 'completed')
+        $salesByMonth = Order::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, SUM(total_price) as total, COUNT(*) as orders')
+            ->where('status', 'delivered')
             ->whereYear('created_at', now()->year)
             ->groupBy('month')
             ->orderBy('month')
@@ -48,7 +48,7 @@ class ReportController extends Controller
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->whereBetween('orders.created_at', [$startDate, $endDate])
-            ->where('orders.status', 'completed')
+            ->where('orders.status', 'delivered')
             ->groupBy('products.id', 'products.name')
             ->orderByDesc('total_sold')
             ->limit(10)
@@ -101,7 +101,7 @@ class ReportController extends Controller
                     $order->order_code,
                     $order->user->name,
                     $order->created_at->format('Y-m-d H:i:s'),
-                    $order->total_amount,
+                    $order->total_price,
                     $order->status,
                     $order->payment_method,
                 ]);
