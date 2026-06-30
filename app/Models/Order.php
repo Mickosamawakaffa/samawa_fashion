@@ -21,14 +21,24 @@ class Order extends Model
         'phone',
         'payment_method',
         'payment_status',
+        'courier',
+        'courier_service',
+        'shipping_cost',
+        'tracking_number',
+        'estimated_delivery',
         'shipped_at',
+        'delivered_at',
         'completed_at',
+        'processing_at',
+        'payment_token',
     ];
 
     protected $casts = [
         'total_price' => 'decimal:2',
         'shipped_at' => 'datetime',
+        'delivered_at' => 'datetime',
         'completed_at' => 'datetime',
+        'processing_at' => 'datetime',
     ];
 
     public function user()
@@ -44,6 +54,16 @@ class Order extends Model
     public function payment()
     {
         return $this->hasOne(Payment::class);
+    }
+
+    public function shippingAddress()
+    {
+        return $this->hasOne(ShippingAddress::class);
+    }
+
+    public function voucher()
+    {
+        return $this->belongsTo(Voucher::class);
     }
 
     protected static function boot()

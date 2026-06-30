@@ -10,6 +10,22 @@
     </a>
 </div>
 
+@if($product->is_dummy)
+<div class="alert alert-warning d-flex align-items-center mb-4">
+    <i class="fas fa-exclamation-triangle me-3 fa-lg"></i>
+    <div>
+        <strong>Produk ini masih menggunakan data DUMMY.</strong><br>
+        Upload foto asli dan perbarui detail produk untuk mengganti data sementara.
+    </div>
+    <form action="{{ route('admin.products.clearDummy', $product) }}" method="POST" class="ms-auto">
+        @csrf
+        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Yakin hapus semua foto dummy? Anda perlu upload foto baru setelah ini.')">
+            <i class="fas fa-trash me-1"></i> Hapus Semua Foto Dummy
+        </button>
+    </form>
+</div>
+@endif
+
 <div class="card">
     <div class="card-header">
         <i class="fas fa-edit me-2"></i> Form Edit Produk
@@ -112,32 +128,55 @@
                 </div>
                 
                 <div class="col-md-4">
-                    <div class="mb-3">
-                        <label class="form-label">Gambar Utama</label>
-                        <input type="file" name="main_image" class="form-control" accept="image/*">
-                        @error('main_image')
-                            <div class="text-danger small">{{ $message }}</div>
-                        @enderror
-                        @if($product->image)
-                            <img src="{{ Storage::url($product->image) }}" alt="Current Image" class="img-thumbnail mt-2" style="max-width: 200px;">
-                        @endif
+                    {{-- Photo Tips --}}
+                    <div class="alert alert-info small mb-3">
+                        <i class="fas fa-lightbulb me-1"></i> <strong>Tips:</strong> Upload minimal 3 foto (tampak depan, detail bahan, dipakai).<br>
+                        Background putih/polos dengan cahaya terang akan terlihat lebih profesional.
                     </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Galeri Gambar</label>
-                        <input type="file" name="images[]" class="form-control" multiple accept="image/*">
-                        @error('images')
-                            <div class="text-danger small">{{ $message }}</div>
-                        @enderror
-                        @if($product->images->count() > 0)
-                            <div class="row mt-2">
-                                @foreach($product->images as $image)
-                                    <div class="col-4 mb-2">
-                                        <img src="{{ Storage::url($image->image) }}" alt="Gallery" class="img-thumbnail" style="max-width: 100%; height: 100px; object-fit: cover;">
+
+                    {{-- Existing Gallery Images --}}
+                    @if($product->images->count() > 0)
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Foto Saat Ini ({{ $product->images->count() }}/6)</label>
+                            <div class="row g-2" id="existing-gallery">
+                                @foreach($product->images as $img)
+                                    <div class="col-6 position-relative" id="img-card-{{ $img->id }}">
+                                        @php
+                                            $isExternal = str_starts_with($img->image_path, 'http');
+                                            $src = $isExternal ? $img->image_path : Storage::url($img->image_path);
+                                        @endphp
+                                        <div class="border rounded overflow-hidden" style="height: 120px;">
+                                            <img src="{{ $src }}" alt="Gallery" loading="lazy" class="w-100 h-100" style="object-fit: cover;">
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-1">
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" name="primary_image_id" value="{{ $img->id }}" id="primary-{{ $img->id }}" {{ $img->is_primary ? 'checked' : '' }}>
+                                                <label class="form-check-label small" for="primary-{{ $img->id }}">Utama</label>
+                                            </div>
+                                            <label class="form-check small text-danger" style="cursor: pointer;">
+                                                <input type="checkbox" name="delete_images[]" value="{{ $img->id }}" class="form-check-input form-check-input-sm">
+                                                <span class="small">Hapus</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 @endforeach
                             </div>
-                        @endif
+                        </div>
+                    @endif
+
+                    {{-- Upload New Images --}}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tambah Foto Baru</label>
+                        <input type="file" name="images[]" id="newImagesInput" class="form-control" multiple accept="image/jpeg,image/png,image/jpg">
+                        <small class="text-muted">JPG/PNG, maks 3MB per foto, maks 6 foto total</small>
+                        @error('images')
+                            <div class="text-danger small">{{ $message }}</div>
+                        @enderror
+                        @error('images.*')
+                            <div class="text-danger small">{{ $message }}</div>
+                        @enderror
+                        {{-- Preview Container --}}
+                        <div class="row g-2 mt-2" id="new-preview-container"></div>
                     </div>
                     
                     <hr>
@@ -181,3 +220,38 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    // Preview new images before upload
+    document.getElementById('newImagesInput').addEventListener('change', function(e) {
+        const container = document.getElementById('new-preview-container');
+        container.innerHTML = '';
+        
+        const files = e.target.files;
+        if (files.length > 6) {
+            alert('Maksimal 6 foto!');
+            this.value = '';
+            return;
+        }
+
+        Array.from(files).forEach((file, index) => {
+            if (!file.type.match('image.*')) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const col = document.createElement('div');
+                col.className = 'col-6';
+                col.innerHTML = `
+                    <div class="border rounded overflow-hidden" style="height: 100px;">
+                        <img src="${ev.target.result}" class="w-100 h-100" style="object-fit: cover;" alt="Preview">
+                    </div>
+                    <small class="text-muted">${file.name.substring(0, 20)}...</small>
+                `;
+                container.appendChild(col);
+            };
+            reader.readAsDataURL(file);
+        });
+    });
+</script>
+@endpush

@@ -54,7 +54,8 @@
                 <div class="col-lg-3 col-md-4 col-sm-6 mb-4" data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}">
                     <div class="product-card" style="position: relative; overflow: visible;">
                         <div class="product-image" style="position: relative; overflow: hidden; height: 300px; border-radius: 10px 10px 0 0;">
-                            <img src="{{ $product->image ? Storage::url($product->image) : asset('images/no-image.jpg') }}" alt="{{ $product->name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
+                            @php $pImg = $product->primaryImage(); $pExt = $pImg && str_starts_with($pImg, 'http'); @endphp
+                            <img src="{{ $pExt ? $pImg : ($pImg ? Storage::url($pImg) : asset('images/no-image.jpg')) }}" alt="{{ $product->name }}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
                             
                             <!-- Badges Stack -->
                             <div class="product-badge-container">
@@ -115,7 +116,8 @@
                 <div class="col-lg-3 col-md-4 col-sm-6 mb-4" data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}">
                     <div class="product-card" style="position: relative; overflow: visible;">
                         <div class="product-image" style="position: relative; overflow: hidden; height: 300px; border-radius: 10px 10px 0 0;">
-                            <img src="{{ $product->image ? Storage::url($product->image) : asset('images/no-image.jpg') }}" alt="{{ $product->name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
+                            @php $pImg = $product->primaryImage(); $pExt = $pImg && str_starts_with($pImg, 'http'); @endphp
+                            <img src="{{ $pExt ? $pImg : ($pImg ? Storage::url($pImg) : asset('images/no-image.jpg')) }}" alt="{{ $product->name }}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
                             
                             <!-- Badges Stack -->
                             <div class="product-badge-container">

@@ -26,6 +26,10 @@ class Product extends Model
         'is_best_seller',
         'is_new_arrival',
         'is_featured',
+        'is_dummy',
+        'flash_sale_price',
+        'flash_sale_start',
+        'flash_sale_end',
     ];
 
     protected $casts = [
@@ -33,10 +37,14 @@ class Product extends Model
         'discount' => 'decimal:2',
         'sizes' => 'array',
         'colors' => 'array',
+        'weight' => 'integer',
         'is_active' => 'boolean',
         'is_best_seller' => 'boolean',
         'is_new_arrival' => 'boolean',
         'is_featured' => 'boolean',
+        'is_dummy' => 'boolean',
+        'flash_sale_start' => 'datetime',
+        'flash_sale_end' => 'datetime',
     ];
 
     public function category()
@@ -46,7 +54,7 @@ class Product extends Model
 
     public function images()
     {
-        return $this->hasMany(ProductImage::class);
+        return $this->hasMany(ProductImage::class)->orderBy('sort_order');
     }
 
     public function wishlists()
@@ -69,9 +77,51 @@ class Product extends Model
         return $this->hasMany(Review::class);
     }
 
+    /**
+     * Get the primary image from product_images relation.
+     * Falls back to the legacy `image` column on products table.
+     */
+    public function primaryImage()
+    {
+        $primary = $this->images()->where('is_primary', true)->first();
+        if ($primary) {
+            return $primary->image_path;
+        }
+        // Fallback: first image in gallery
+        $first = $this->images()->first();
+        if ($first) {
+            return $first->image_path;
+        }
+        // Final fallback: legacy single image column
+        return $this->image;
+    }
+
+    /**
+     * Scope to filter only dummy products.
+     */
+    public function scopeDummy($query)
+    {
+        return $query->where('is_dummy', true);
+    }
+
     public function getFinalPriceAttribute()
     {
-        return $this->price - ($this->price * ($this->discount / 100));
+        if ($this->is_flash_sale_active) {
+            return (float) $this->flash_sale_price;
+        }
+        return (float) ($this->price - ($this->price * ($this->discount / 100)));
+    }
+
+    public function getIsFlashSaleActiveAttribute()
+    {
+        if ($this->flash_sale_price === null) {
+            return false;
+        }
+        $now = now();
+        return $this->flash_sale_start !== null 
+            && $this->flash_sale_end !== null 
+            && $now->gte($this->flash_sale_start) 
+            && $now->lte($this->flash_sale_end);
     }
 
     public function getAverageRatingAttribute()

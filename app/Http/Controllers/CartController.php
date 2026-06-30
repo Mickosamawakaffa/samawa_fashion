@@ -205,4 +205,77 @@ class CartController extends Controller
             'cart_count' => $cartCount
         ]);
     }
+
+    /**
+     * Apply Voucher to Cart via AJAX
+     */
+    public function applyVoucher(Request $request)
+    {
+        if ($request->code === 'CLEAR_VOUCHER') {
+            session()->forget('applied_voucher');
+            return response()->json([
+                'success' => true,
+                'message' => 'Voucher dihapus',
+                'discount_amount' => 0,
+                'discount_formatted' => 'Rp 0',
+            ]);
+        }
+
+        $request->validate([
+            'code' => 'required|string|max:255',
+        ]);
+
+        $code = trim($request->code);
+        $voucher = \App\Models\Voucher::where('code', $code)->first();
+
+        if (!$voucher) {
+            return response()->json(['success' => false, 'message' => 'Kode voucher tidak ditemukan.'], 404);
+        }
+
+        // Calculate subtotal
+        if (auth()->check()) {
+            $cartItems = Cart::where('user_id', auth()->id())->with('product')->get();
+            $subtotal = $cartItems->sum(function ($item) {
+                return $item->product->final_price * $item->quantity;
+            });
+        } else {
+            $sessionCart = session()->get('cart', []);
+            $subtotal = 0;
+            foreach ($sessionCart as $productId => $quantity) {
+                $product = Product::find($productId);
+                if ($product) {
+                    $subtotal += $product->final_price * $quantity;
+                }
+            }
+        }
+
+        if ($subtotal <= 0) {
+            return response()->json(['success' => false, 'message' => 'Keranjang Anda kosong.'], 400);
+        }
+
+        // Validate voucher
+        [$isValid, $errorMessage] = $voucher->isValidFor($subtotal);
+        if (!$isValid) {
+            return response()->json(['success' => false, 'message' => $errorMessage], 400);
+        }
+
+        $discount = $voucher->calculateDiscountFor($subtotal);
+        $newTotal = max(0, $subtotal - $discount);
+
+        // Cache applied voucher in session
+        session()->put('applied_voucher', [
+            'id' => $voucher->id,
+            'code' => $voucher->code,
+            'discount' => $discount,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Voucher "' . $voucher->code . '" berhasil digunakan.',
+            'discount_amount' => $discount,
+            'discount_formatted' => 'Rp ' . number_format($discount, 0, ',', '.'),
+            'new_total_formatted' => 'Rp ' . number_format($newTotal, 0, ',', '.'),
+            'voucher_code' => $voucher->code,
+        ]);
+    }
 }

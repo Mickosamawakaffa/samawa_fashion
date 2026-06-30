@@ -31,6 +31,11 @@ Route::get('/kategori', [CategoryController::class, 'index'])->name('categories.
 Route::get('/tentang', [PageController::class, 'about'])->name('about');
 Route::get('/kontak', [PageController::class, 'contact'])->name('contact');
 Route::post('/kontak', [PageController::class, 'contactSubmit'])->name('contact.submit');
+
+Route::get('/syarat-ketentuan', [PageController::class, 'terms'])->name('terms');
+Route::get('/kebijakan-privasi', [PageController::class, 'privacy'])->name('privacy');
+Route::get('/kebijakan-retur', [PageController::class, 'returns'])->name('returns');
+Route::get('/faq', [PageController::class, 'faq'])->name('faq');
 Route::get('/sitemap.xml', [PageController::class, 'sitemap'])->name('sitemap');
 
 // Cart Group (Accessible to Guest & Authenticated Users)
@@ -39,6 +44,7 @@ Route::prefix('cart')->name('cart.')->group(function () {
     Route::post('/add', [CartController::class, 'add'])->name('add');
     Route::put('/update', [CartController::class, 'update'])->name('update');
     Route::delete('/remove', [CartController::class, 'remove'])->name('remove');
+    Route::post('/apply-voucher', [CartController::class, 'applyVoucher'])->name('apply_voucher');
 });
 
 // Authenticated Routes
@@ -57,6 +63,8 @@ Route::middleware('auth')->group(function () {
     Route::prefix('checkout')->name('checkout.')->group(function () {
         Route::get('/', [CheckoutController::class, 'index'])->name('index');
         Route::post('/', [CheckoutController::class, 'store'])->name('store');
+        Route::get('/cities', [CheckoutController::class, 'cities'])->name('cities');
+        Route::post('/shipping-cost', [CheckoutController::class, 'shippingCost'])->name('shipping-cost');
         Route::get('/success/{order_code}', [CheckoutController::class, 'success'])->name('success');
     });
 
@@ -90,14 +98,19 @@ Route::middleware('auth')->group(function () {
     });
 });
 
+// Midtrans Webhook Callback
+Route::post('/midtrans/callback', [App\Http\Controllers\CheckoutController::class, 'midtransCallback'])->name('midtrans.callback');
+
 // Admin Panel (Role Admin)
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::resource('products', AdminProductController::class);
+    Route::delete('products/{product}/images/{image}', [AdminProductController::class, 'destroyImage'])->name('products.destroyImage');
+    Route::post('products/{product}/clear-dummy', [AdminProductController::class, 'clearDummyImages'])->name('products.clearDummy');
     Route::resource('categories', AdminCategoryController::class);
     
-    // Admin orders print PDF invoice
     Route::get('/orders/{id}/invoice', [AdminOrderController::class, 'printInvoice'])->name('orders.invoice');
+    Route::put('/orders/{order}/update-status', [AdminOrderController::class, 'updateStatus'])->name('orders.updateStatus');
     Route::resource('orders', AdminOrderController::class);
     
     Route::resource('customers', AdminCustomerController::class);
@@ -108,6 +121,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/testimonials', [AdminTestimonialController::class, 'index'])->name('testimonials.index');
     Route::post('/testimonials/{id}/approve', [AdminTestimonialController::class, 'approve'])->name('testimonials.approve');
     Route::delete('/testimonials/{id}', [AdminTestimonialController::class, 'destroy'])->name('testimonials.destroy');
+
+    // Admin Shipping Settings
+    Route::get('/settings/shipping', [App\Http\Controllers\Admin\ShippingSettingController::class, 'index'])->name('settings.shipping');
+    Route::post('/settings/shipping', [App\Http\Controllers\Admin\ShippingSettingController::class, 'update'])->name('settings.shipping.update');
 });
 
 require __DIR__.'/auth.php';

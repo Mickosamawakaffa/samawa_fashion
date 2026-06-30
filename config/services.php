@@ -35,4 +35,26 @@ return [
         ],
     ],
 
+    'rajaongkir' => [
+        'key' => env('RAJAONGKIR_API_KEY'),
+        'url' => env('RAJAONGKIR_BASE_URL', 'https://api.rajaongkir.com/starter'),
+    ],
+
+    'midtrans' => [
+        'server_key' => env('MIDTRANS_SERVER_KEY'),
+        'client_key' => env('MIDTRANS_CLIENT_KEY'),
+        'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
+    ],
+
+    'analytics' => [
+        'ga_measurement_id' => env('ANALYTICS_GA_MEASUREMENT_ID'),
+        'meta_pixel_id' => env('ANALYTICS_META_PIXEL_ID'),
+    ],
+
+    'social' => [
+        'whatsapp' => env('SOCIAL_WHATSAPP'),
+        'instagram' => env('SOCIAL_INSTAGRAM'),
+        'tiktok' => env('SOCIAL_TIKTOK'),
+    ],
+
 ];

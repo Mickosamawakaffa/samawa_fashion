@@ -10,6 +10,18 @@
     </a>
 </div>
 
+{{-- Filter Buttons --}}
+<div class="d-flex gap-2 mb-3">
+    <a href="{{ route('admin.products.index') }}" class="btn btn-sm {{ !request('dummy') ? 'btn-dark' : 'btn-outline-dark' }}">
+        <i class="fas fa-list me-1"></i> Semua Produk
+    </a>
+    @if($dummyCount > 0)
+        <a href="{{ route('admin.products.index', ['dummy' => 1]) }}" class="btn btn-sm {{ request('dummy') ? 'btn-warning text-dark' : 'btn-outline-warning' }}">
+            <i class="fas fa-image me-1"></i> Dummy Saja ({{ $dummyCount }})
+        </a>
+    @endif
+</div>
+
 <div class="card">
     <div class="card-header">
         <i class="fas fa-box me-2"></i> Daftar Produk
@@ -30,10 +42,16 @@
                 </thead>
                 <tbody>
                     @foreach($products as $product)
+                        @php
+                            $imgSrc = $product->primaryImage();
+                            $isExternal = $imgSrc && str_starts_with($imgSrc, 'http');
+                            $imgUrl = $isExternal ? $imgSrc : ($imgSrc ? Storage::url($imgSrc) : asset('images/no-image.jpg'));
+                        @endphp
                         <tr>
                             <td>
-                                <img src="{{ $product->image ? Storage::url($product->image) : asset('images/no-image.jpg') }}" 
+                                <img src="{{ $imgUrl }}" 
                                      alt="{{ $product->name }}" 
+                                     loading="lazy"
                                      style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;">
                             </td>
                             <td>
@@ -45,6 +63,9 @@
                             <td>Rp {{ number_format($product->price, 0, ',', '.') }}</td>
                             <td>{{ $product->stock }}</td>
                             <td>
+                                @if($product->is_dummy)
+                                    <span class="badge bg-warning text-dark me-1"><i class="fas fa-image me-1"></i>DUMMY</span>
+                                @endif
                                 @if($product->is_active)
                                     <span class="badge bg-success">Aktif</span>
                                 @else
@@ -81,7 +102,7 @@
         </div>
         
         <div class="d-flex justify-content-center mt-3">
-            {{ $products->links() }}
+            {{ $products->appends(request()->query())->links() }}
         </div>
     </div>
 </div>

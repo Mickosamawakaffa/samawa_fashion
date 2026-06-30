@@ -34,7 +34,7 @@
                         </div>
                         <div>
                             <h5>Telepon</h5>
-                            <p class="text-muted">+62 812 3456 7890<br>(Senin - Sabtu: 09.00 - 18.00)</p>
+                            <p class="text-muted">+62 811 2233 4455<br>(Senin - Sabtu: 09.00 - 18.00)</p>
                         </div>
                     </div>
 

@@ -17,13 +17,25 @@
                 <i class="fas fa-image me-2"></i> Gambar Produk
             </div>
             <div class="card-body">
-                <img src="{{ $product->image ? Storage::url($product->image) : asset('images/no-image.jpg') }}" alt="{{ $product->name }}" class="img-fluid mb-3" style="max-height: 350px; object-fit: cover;">
+                @php
+                    $showImg = $product->primaryImage();
+                    $showIsExt = $showImg && str_starts_with($showImg, 'http');
+                    $showUrl = $showIsExt ? $showImg : ($showImg ? Storage::url($showImg) : asset('images/no-image.jpg'));
+                @endphp
+                <img src="{{ $showUrl }}" alt="{{ $product->name }}" class="img-fluid mb-3" loading="lazy" style="max-height: 350px; object-fit: cover;">
                 @if($product->images->count() > 0)
-                    <h6 class="mt-3">Galeri</h6>
+                    <h6 class="mt-3">Galeri ({{ $product->images->count() }} foto)</h6>
                     <div class="row">
                         @foreach($product->images as $image)
+                            @php
+                                $gIsExt = str_starts_with($image->image_path, 'http');
+                                $gUrl = $gIsExt ? $image->image_path : Storage::url($image->image_path);
+                            @endphp
                             <div class="col-4 mb-2">
-                                <img src="{{ Storage::url($image->image) }}" alt="Gallery" class="img-thumbnail" style="height: 100px; object-fit: cover;">
+                                <img src="{{ $gUrl }}" alt="Gallery" loading="lazy" class="img-thumbnail" style="height: 100px; object-fit: cover;">
+                                @if($image->is_primary)
+                                    <span class="badge bg-success d-block mt-1">Utama</span>
+                                @endif
                             </div>
                         @endforeach
                     </div>

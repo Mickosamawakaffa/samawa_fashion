@@ -168,6 +168,9 @@
                     <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}">
                         <i class="fas fa-chart-bar"></i> Laporan
                     </a>
+                    <a class="nav-link {{ request()->routeIs('admin.settings.shipping') ? 'active' : '' }}" href="{{ route('admin.settings.shipping') }}">
+                        <i class="fas fa-truck"></i> Pengaturan Kirim
+                    </a>
                     <hr class="border-secondary">
                     <a class="nav-link" href="{{ route('home') }}">
                         <i class="fas fa-home"></i> Website

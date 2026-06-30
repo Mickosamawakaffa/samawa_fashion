@@ -15,7 +15,7 @@
         <i class="fas fa-plus me-2"></i> Form Tambah Produk
     </div>
     <div class="card-body">
-        <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" id="createProductForm">
             @csrf
             
             <div class="row">
@@ -111,21 +111,26 @@
                 </div>
                 
                 <div class="col-md-4">
-                    <div class="mb-3">
-                        <label class="form-label">Gambar Utama <span class="text-danger">*</span></label>
-                        <input type="file" name="main_image" class="form-control" required accept="image/*">
-                        @error('main_image')
-                            <div class="text-danger small">{{ $message }}</div>
-                        @enderror
+                    {{-- Photo Tips --}}
+                    <div class="alert alert-info small mb-3">
+                        <i class="fas fa-lightbulb me-1"></i> <strong>Tips:</strong> Upload minimal 3 foto (tampak depan, detail bahan, dipakai).<br>
+                        Background putih/polos dengan cahaya terang akan terlihat lebih profesional.
                     </div>
-                    
+
                     <div class="mb-3">
-                        <label class="form-label">Galeri Gambar</label>
-                        <input type="file" name="images[]" class="form-control" multiple accept="image/*">
+                        <label class="form-label fw-bold">Foto Produk <span class="text-danger">*</span> <small class="text-muted fw-normal">(min 3, maks 6)</small></label>
+                        <input type="file" name="images[]" id="createImagesInput" class="form-control" multiple accept="image/jpeg,image/png,image/jpg" required>
+                        <small class="text-muted">JPG/PNG, maks 3MB per foto</small>
                         @error('images')
                             <div class="text-danger small">{{ $message }}</div>
                         @enderror
-                        <small class="text-muted">Maksimal 5 gambar tambahan</small>
+                        @error('images.*')
+                            <div class="text-danger small">{{ $message }}</div>
+                        @enderror
+
+                        {{-- Preview + Primary Selection --}}
+                        <div class="row g-2 mt-2" id="create-preview-container"></div>
+                        <input type="hidden" name="primary_image" id="primaryImageInput" value="0">
                     </div>
                     
                     <hr>
@@ -169,3 +174,44 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    // Preview images with primary selection (radio buttons)
+    document.getElementById('createImagesInput').addEventListener('change', function(e) {
+        const container = document.getElementById('create-preview-container');
+        container.innerHTML = '';
+        
+        const files = e.target.files;
+        if (files.length < 3) {
+            container.innerHTML = '<div class="col-12"><div class="text-danger small"><i class="fas fa-exclamation-circle me-1"></i> Minimal 3 foto diperlukan</div></div>';
+        }
+        if (files.length > 6) {
+            alert('Maksimal 6 foto!');
+            this.value = '';
+            return;
+        }
+
+        Array.from(files).forEach((file, index) => {
+            if (!file.type.match('image.*')) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const col = document.createElement('div');
+                col.className = 'col-6';
+                col.innerHTML = `
+                    <div class="border rounded overflow-hidden" style="height: 100px;">
+                        <img src="${ev.target.result}" class="w-100 h-100" style="object-fit: cover;" alt="Preview">
+                    </div>
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="radio" name="primary_image_radio" value="${index}" id="primary-new-${index}" ${index === 0 ? 'checked' : ''} onchange="document.getElementById('primaryImageInput').value = this.value">
+                        <label class="form-check-label small" for="primary-new-${index}">Foto Utama</label>
+                    </div>
+                `;
+                container.appendChild(col);
+            };
+            reader.readAsDataURL(file);
+        });
+    });
+</script>
+@endpush

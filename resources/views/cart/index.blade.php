@@ -14,6 +14,35 @@
             @if($cart->items->count() > 0)
                 <div class="row">
                     <div class="col-lg-8">
+                        <!-- Free Shipping Promo Progress Bar -->
+                        @php
+                            $freeShippingMin = (int)\App\Models\Setting::getValue('shipping_free_min_spend', 500000);
+                            $remaining = $freeShippingMin - $cart->total;
+                            $percent = min(100, max(0, ($cart->total / $freeShippingMin) * 100));
+                        @endphp
+                        <div class="card mb-4 border-0 shadow-sm" style="border-radius: 10px; background-color: #ffffff;">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-semibold mb-0" id="free-shipping-message">
+                                        @if($remaining > 0)
+                                            <i class="fas fa-truck text-gold me-2" style="color: var(--gold-color);"></i>
+                                            Belanja <strong class="text-gold" style="color: var(--gold-color);">Rp <span id="free-shipping-remaining">{{ number_format($remaining, 0, ',', '.') }}</span></strong> lagi untuk <strong>Gratis Ongkir!</strong>
+                                        @else
+                                            <i class="fas fa-gift text-success me-2" style="color: var(--gold-color);"></i>
+                                            Selamat! Anda mendapatkan <strong>Gratis Ongkir!</strong> 🎉
+                                        @endif
+                                    </h6>
+                                    <span class="small text-muted fw-bold"><span id="free-shipping-percent">{{ round($percent) }}</span>%</span>
+                                </div>
+                                <div class="progress" style="height: 10px; background-color: #e9ecef; border-radius: 5px;">
+                                    <div id="free-shipping-progress-bar" class="progress-bar" role="progressbar" 
+                                         style="width: {{ $percent }}%; background-color: var(--gold-color);" 
+                                         aria-valuenow="{{ $percent }}" aria-valuemin="0" aria-valuemax="100">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="card mb-4 border-0 shadow-sm" style="border-radius: 10px;">
                             <div class="card-header bg-black text-gold" style="color: var(--gold-color); font-weight: 600; border-radius: 10px 10px 0 0;">
                                 <i class="fas fa-shopping-cart me-2"></i> Produk di Keranjang
@@ -60,19 +89,41 @@
                                 <i class="fas fa-calculator me-2"></i> Ringkasan Pesanan
                             </div>
                             <div class="card-body p-4">
+                                @php
+                                    $appliedVoucher = session('applied_voucher');
+                                    $discount = $appliedVoucher ? $appliedVoucher['discount'] : 0;
+                                    $subtotal = $cart->total;
+                                    $shipping = $subtotal >= $freeShippingThreshold ? 0 : 15000;
+                                    $totalPrice = max(0, $subtotal - $discount) + $shipping;
+                                @endphp
                                 <div class="d-flex justify-content-between mb-3">
                                     <span>Subtotal</span>
-                                    <span id="summary-subtotal" class="fw-semibold">Rp {{ number_format($cart->total, 0, ',', '.') }}</span>
+                                    <span id="summary-subtotal" class="fw-semibold">Rp {{ number_format($subtotal, 0, ',', '.') }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-3 text-danger {{ $discount > 0 ? '' : 'd-none' }}" id="discount-row">
+                                    <span>Diskon Voucher (<strong id="applied-code-label">{{ $appliedVoucher['code'] ?? '' }}</strong>)</span>
+                                    <span id="summary-discount">-Rp {{ number_format($discount, 0, ',', '.') }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-3 text-muted small">
                                     <span>Ongkos Kirim</span>
-                                    <span id="shipping-cost-text">{{ $cart->total > 500000 ? 'Gratis (Belanja > Rp 500.000)' : 'Rp 15.000 (Flat)' }}</span>
+                                    <span id="shipping-cost-text">{{ $shipping === 0 ? 'Gratis' : 'Rp 15.000 (Flat)' }}</span>
                                 </div>
+
+                                <!-- Voucher Input -->
+                                <div class="mb-3 border-top pt-3">
+                                    <label for="voucher_code" class="form-label small fw-semibold">Gunakan Voucher Diskon</label>
+                                    <div class="input-group">
+                                        <input type="text" id="voucher_code" class="form-control" placeholder="Kode Voucher" value="{{ $appliedVoucher['code'] ?? '' }}" style="border-radius: 0;">
+                                        <button class="btn btn-dark" type="button" id="btn-apply-voucher" style="border-radius: 0;">Pakai</button>
+                                    </div>
+                                    <div id="voucher-message" class="small mt-1" style="display: none;"></div>
+                                </div>
+
                                 <hr>
                                 <div class="d-flex justify-content-between mb-4">
                                     <strong>Total</strong>
                                     <strong class="text-gold fs-5" id="summary-total" style="color: var(--gold-color);">
-                                        Rp {{ number_format($cart->total + ($cart->total > 500000 ? 0 : 15000), 0, ',', '.') }}
+                                        Rp {{ number_format($totalPrice, 0, ',', '.') }}
                                     </strong>
                                 </div>
                                 <a href="{{ route('checkout.index') }}" class="btn-gold w-100 text-center d-block py-3 text-decoration-none">
@@ -102,6 +153,8 @@
 
 @push('scripts')
 <script>
+    const freeShippingThreshold = {{ \App\Models\Setting::getValue('shipping_free_min_spend', 500000) }};
+
     function incrementQty(itemId) {
         let input = $('#qty-input-' + itemId);
         let val = parseInt(input.value || input.val());
@@ -113,6 +166,26 @@
         let val = parseInt(input.value || input.val());
         if (val > 1) {
             updateQuantity(itemId, val - 1);
+        }
+    }
+
+    function updateProgressBar(subtotalNum) {
+        let remaining = freeShippingThreshold - subtotalNum;
+        let percent = Math.min(100, Math.max(0, (subtotalNum / freeShippingThreshold) * 100));
+        
+        $('#free-shipping-percent').text(Math.round(percent));
+        $('#free-shipping-progress-bar').css('width', percent + '%').attr('aria-valuenow', percent);
+        
+        if (remaining > 0) {
+            $('#free-shipping-message').html(
+                '<i class="fas fa-truck text-gold me-2" style="color: var(--gold-color);"></i> ' +
+                'Belanja <strong class="text-gold" style="color: var(--gold-color);">Rp ' + new Intl.NumberFormat('id-ID').format(remaining) + '</strong> lagi untuk <strong>Gratis Ongkir!</strong>'
+            );
+        } else {
+            $('#free-shipping-message').html(
+                '<i class="fas fa-gift text-success me-2" style="color: var(--gold-color);"></i> ' +
+                'Selamat! Anda mendapatkan <strong>Gratis Ongkir!</strong> 🎉'
+            );
         }
     }
 
@@ -135,13 +208,16 @@
                 // Update summary subtotals & totals
                 $('#summary-subtotal').text(response.total);
                 
-                // Calculate grand total (free shipping if subtotal > 500.000)
+                // Calculate grand total (free shipping if subtotal > threshold)
                 let subtotalNum = parseInt(response.total.replace(/[^0-9]/g, ''));
-                let shippingCost = subtotalNum > 500000 ? 0 : 15000;
-                let shippingStr = shippingCost === 0 ? 'Gratis (Belanja > Rp 500.000)' : 'Rp 15.000 (Flat)';
+                let shippingCost = subtotalNum >= freeShippingThreshold ? 0 : 15000;
+                let shippingStr = shippingCost === 0 ? 'Gratis' : 'Rp 15.000 (Flat)';
                 $('#shipping-cost-text').text(shippingStr);
                 let grandTotalStr = 'Rp ' + new Intl.NumberFormat('id-ID').format(subtotalNum + shippingCost);
                 $('#summary-total').text(grandTotalStr);
+
+                // Update Progress Bar
+                updateProgressBar(subtotalNum);
 
                 // Update navbar badge count
                 if (response.cart_count > 0) {
@@ -210,11 +286,14 @@
                         // Update summary totals
                         $('#summary-subtotal').text(response.total);
                         let subtotalNum = parseInt(response.total.replace(/[^0-9]/g, ''));
-                        let shippingCost = subtotalNum > 500000 ? 0 : 15000;
-                        let shippingStr = shippingCost === 0 ? 'Gratis (Belanja > Rp 500.000)' : 'Rp 15.000 (Flat)';
+                        let shippingCost = subtotalNum >= freeShippingThreshold ? 0 : 15000;
+                        let shippingStr = shippingCost === 0 ? 'Gratis' : 'Rp 15.000 (Flat)';
                         $('#shipping-cost-text').text(shippingStr);
                         let grandTotalStr = 'Rp ' + new Intl.NumberFormat('id-ID').format(subtotalNum + shippingCost);
                         $('#summary-total').text(grandTotalStr);
+
+                        // Update Progress Bar
+                        updateProgressBar(subtotalNum);
 
                         // Update navbar badge count
                         if (response.cart_count > 0) {
@@ -234,5 +313,48 @@
             }
         });
     }
+
+    // Voucher Apply AJAX logic
+    $('#btn-apply-voucher').click(function(e) {
+        e.preventDefault();
+        let code = $('#voucher_code').val().trim();
+        
+        if (!code) {
+            code = 'CLEAR_VOUCHER';
+        }
+
+        $.ajax({
+            url: '{{ route('cart.apply_voucher') }}',
+            method: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                code: code
+            },
+            success: function(response) {
+                if (code === 'CLEAR_VOUCHER') {
+                    $('#voucher-message').removeClass('text-danger').addClass('text-success').text('Voucher berhasil dihapus.').show();
+                    $('#discount-row').addClass('d-none');
+                    $('#voucher_code').val('');
+                } else {
+                    $('#voucher-message').removeClass('text-danger').addClass('text-success').text(response.message).show();
+                    $('#discount-row').removeClass('d-none');
+                    $('#applied-code-label').text(response.voucher_code);
+                    $('#summary-discount').text('-' + response.discount_formatted);
+                }
+
+                // Recalculate totals
+                let subtotalNum = parseInt($('#summary-subtotal').text().replace(/[^0-9]/g, ''));
+                let discountNum = response.discount_amount;
+                let shippingCost = subtotalNum >= freeShippingThreshold ? 0 : 15000;
+                let grandTotal = Math.max(0, subtotalNum - discountNum) + shippingCost;
+                
+                $('#summary-total').text('Rp ' + new Intl.NumberFormat('id-ID').format(grandTotal));
+            },
+            error: function(xhr) {
+                $('#voucher-message').removeClass('text-success').addClass('text-danger').text(xhr.responseJSON?.message || 'Gagal menggunakan voucher.').show();
+                $('#discount-row').addClass('d-none');
+            }
+        });
+    });
 </script>
 @endpush

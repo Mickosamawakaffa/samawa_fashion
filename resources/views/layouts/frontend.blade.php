@@ -551,7 +551,63 @@
                 font-size: 1.8rem;
             }
         }
+
+        /* WhatsApp Floating Button */
+        .whatsapp-float {
+            position: fixed;
+            width: 60px;
+            height: 60px;
+            bottom: 40px;
+            right: 40px;
+            background-color: #25d366;
+            color: #fff;
+            border-radius: 50%;
+            text-align: center;
+            font-size: 30px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .whatsapp-float:hover {
+            background-color: #20ba5a;
+            color: #fff;
+            transform: scale(1.1);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+        }
     </style>
+    @if(config('services.analytics.ga_measurement_id'))
+        <!-- Google Tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id={{ config('services.analytics.ga_measurement_id') }}"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '{{ config('services.analytics.ga_measurement_id') }}');
+        </script>
+    @endif
+
+    @if(config('services.analytics.meta_pixel_id'))
+        <!-- Meta Pixel Code -->
+        <script>
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '{{ config('services.analytics.meta_pixel_id') }}');
+            fbq('track', 'PageView');
+        </script>
+        <noscript>
+            <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id={{ config('services.analytics.meta_pixel_id') }}&ev=PageView&noscript=1"/>
+        </noscript>
+    @endif
 </head>
 <body>
     <!-- Navbar -->
@@ -647,25 +703,25 @@
                     <h5>SAMAWA FASHION</h5>
                     <p class="text-muted">Toko fashion luxury dengan koleksi terbaik untuk gaya hidup elegan Anda.</p>
                     <div class="footer-social mt-3">
-                        <a href="#"><i class="fab fa-instagram"></i></a>
-                        <a href="#"><i class="fab fa-tiktok"></i></a>
-                        <a href="#"><i class="fab fa-whatsapp"></i></a>
+                        <a href="{{ config('services.social.instagram') }}" target="_blank" rel="noopener" title="Instagram SAMAWA"><i class="fab fa-instagram"></i></a>
+                        <a href="{{ config('services.social.tiktok') }}" target="_blank" rel="noopener" title="TikTok SAMAWA"><i class="fab fa-tiktok"></i></a>
+                        <a href="https://wa.me/{{ config('services.social.whatsapp') }}?text={{ urlencode('Halo Samawa, saya mau tanya tentang produk') }}" target="_blank" rel="noopener" title="WhatsApp SAMAWA"><i class="fab fa-whatsapp"></i></a>
                     </div>
                 </div>
                 <div class="col-md-2 mb-4">
-                    <h5>Menu</h5>
+                    <h5>Bantuan & Legal</h5>
                     <ul class="list-unstyled">
-                        <li><a href="{{ route('home') }}">Home</a></li>
-                        <li><a href="{{ route('products.index') }}">Produk</a></li>
-                        <li><a href="#categories">Kategori</a></li>
-                        <li><a href="#about">Tentang</a></li>
+                        <li><a href="{{ route('terms') }}">Syarat & Ketentuan</a></li>
+                        <li><a href="{{ route('privacy') }}">Kebijakan Privasi</a></li>
+                        <li><a href="{{ route('returns') }}">Kebijakan Retur & Refund</a></li>
+                        <li><a href="{{ route('faq') }}">FAQ</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3 mb-4">
                     <h5>Kontak</h5>
                     <ul class="list-unstyled">
-                        <li><i class="fas fa-map-marker-alt me-2"></i> Jakarta, Indonesia</li>
-                        <li><i class="fas fa-phone me-2"></i> +62 812 3456 7890</li>
+                        <li><i class="fas fa-map-marker-alt me-2"></i> Kemang Raya No. 45, Jakarta Selatan</li>
+                        <li><i class="fas fa-phone me-2"></i> +62 878 5339 1433</li>
                         <li><i class="fas fa-envelope me-2"></i> info@samawafashion.com</li>
                     </ul>
                 </div>
@@ -703,6 +759,92 @@
             duration: 800,
             once: true
         });
+
+        // Global Analytics e-commerce custom events
+        window.trackViewContent = function(id, name, category, price) {
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'view_item', {
+                    value: parseFloat(price),
+                    currency: 'IDR',
+                    items: [{
+                        item_id: id,
+                        item_name: name,
+                        item_category: category,
+                        price: parseFloat(price)
+                    }]
+                });
+            }
+            if (typeof fbq !== 'undefined') {
+                fbq('track', 'ViewContent', {
+                    content_ids: [id.toString()],
+                    content_name: name,
+                    content_category: category,
+                    content_type: 'product',
+                    value: parseFloat(price),
+                    currency: 'IDR'
+                });
+            }
+        };
+
+        window.trackAddToCart = function(id, name, category, price, quantity) {
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'add_to_cart', {
+                    value: parseFloat(price) * parseInt(quantity),
+                    currency: 'IDR',
+                    items: [{
+                        item_id: id,
+                        item_name: name,
+                        item_category: category,
+                        price: parseFloat(price),
+                        quantity: parseInt(quantity)
+                    }]
+                });
+            }
+            if (typeof fbq !== 'undefined') {
+                fbq('track', 'AddToCart', {
+                    content_ids: [id.toString()],
+                    content_name: name,
+                    content_category: category,
+                    content_type: 'product',
+                    value: parseFloat(price) * parseInt(quantity),
+                    currency: 'IDR'
+                });
+            }
+        };
+
+        window.trackInitiateCheckout = function(value, items) {
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'begin_checkout', {
+                    value: parseFloat(value),
+                    currency: 'IDR',
+                    items: items
+                });
+            }
+            if (typeof fbq !== 'undefined') {
+                fbq('track', 'InitiateCheckout', {
+                    value: parseFloat(value),
+                    currency: 'IDR'
+                });
+            }
+        };
+
+        window.trackPurchase = function(orderId, value, items) {
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'purchase', {
+                    transaction_id: orderId,
+                    value: parseFloat(value),
+                    currency: 'IDR',
+                    items: items
+                });
+            }
+            if (typeof fbq !== 'undefined') {
+                fbq('track', 'Purchase', {
+                    content_type: 'product',
+                    value: parseFloat(value),
+                    currency: 'IDR'
+                });
+            }
+        };
         
         @if(session('success'))
             Swal.fire({
@@ -725,6 +867,11 @@
         @endif
     </script>
     
+    <!-- WhatsApp Floating Button -->
+    <a href="https://wa.me/{{ config('services.social.whatsapp') }}?text={{ urlencode('Halo Samawa, saya mau tanya tentang produk') }}" class="whatsapp-float" target="_blank" rel="noopener" title="Hubungi CS kami di WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
     @stack('scripts')
 </body>
 </html>

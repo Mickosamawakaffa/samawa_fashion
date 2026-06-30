@@ -4,14 +4,21 @@
             <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
                 <div class="product-card" style="position: relative; overflow: visible;">
                     <div class="product-image" style="position: relative; overflow: hidden; height: 300px; border-radius: 10px 10px 0 0;">
-                        <img src="{{ $product->image ? Storage::url($product->image) : asset('images/no-image.jpg') }}" alt="{{ $product->name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
+                        @php
+                            $primaryImg = $product->primaryImage();
+                            $isExternal = $primaryImg && str_starts_with($primaryImg, 'http');
+                            $imgSrc = $isExternal ? $primaryImg : ($primaryImg ? Storage::url($primaryImg) : asset('images/no-image.jpg'));
+                        @endphp
+                        <img src="{{ $imgSrc }}" alt="{{ $product->name }}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
                         
                         <!-- Badges Stack -->
                         <div class="product-badge-container">
                             @if($product->stock == 0)
                                 <span class="product-badge bg-secondary text-white">Stok Habis</span>
                             @endif
-                            @if($product->discount > 0)
+                            @if($product->is_flash_sale_active)
+                                <span class="product-badge bg-warning text-dark fw-bold"><i class="fas fa-bolt me-1"></i>FLASH SALE</span>
+                            @elseif($product->discount > 0)
                                 <span class="product-badge bg-danger text-white">Diskon {{ $product->discount }}%</span>
                             @endif
                             @if($product->is_featured)
@@ -41,10 +48,15 @@
                         </a>
                         <div class="product-price" style="font-size: 1.2rem; font-weight: 700; color: var(--gold-color);">
                             Rp {{ number_format($product->final_price, 0, ',', '.') }}
-                            @if($product->discount > 0)
+                            @if($product->is_flash_sale_active || $product->discount > 0)
                                 <span class="product-old-price" style="text-decoration: line-through; color: var(--gray-color); font-size: 0.9rem; margin-left: 10px;">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
                             @endif
                         </div>
+                        @if($product->is_flash_sale_active)
+                            <div class="flash-sale-countdown small mt-2 fw-semibold text-danger" data-end="{{ $product->flash_sale_end->toISOString() }}">
+                                <i class="far fa-clock me-1"></i> Selesai: <span class="countdown-timer">00:00:00</span>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -63,3 +75,48 @@
         <button type="button" class="btn btn-gold px-4 py-2" onclick="document.getElementById('reset-filters').click()" style="font-weight: 600;">Riset Filter</button>
     </div>
 @endif
+
+<script>
+    if (typeof startFlashSaleCountdowns === 'undefined') {
+        function startFlashSaleCountdowns() {
+            document.querySelectorAll('[data-end]').forEach(function(el) {
+                const end = new Date(el.getAttribute('data-end')).getTime();
+                
+                function update() {
+                    const now = new Date().getTime();
+                    const dist = end - now;
+                    
+                    if (dist < 0) {
+                        el.innerHTML = '<i class="far fa-clock me-1"></i> Flash sale berakhir!';
+                        return;
+                    }
+                    
+                    const hours = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((dist % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((dist % (1000 * 60)) / 1000);
+                    
+                    const timerEl = el.querySelector('.countdown-timer');
+                    if (timerEl) {
+                        timerEl.innerText = 
+                            (hours < 10 ? '0' : '') + hours + ':' + 
+                            (minutes < 10 ? '0' : '') + minutes + ':' + 
+                            (seconds < 10 ? '0' : '') + seconds;
+                    }
+                }
+                
+                update();
+                setInterval(update, 1000);
+            });
+        }
+        document.addEventListener("DOMContentLoaded", startFlashSaleCountdowns);
+    } else {
+        startFlashSaleCountdowns();
+    }
+    if (window.jQuery) {
+        $(document).ajaxComplete(function() {
+            if (typeof startFlashSaleCountdowns !== 'undefined') {
+                startFlashSaleCountdowns();
+            }
+        });
+    }
+</script>

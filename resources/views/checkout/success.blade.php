@@ -27,7 +27,39 @@
                 </div>
                 
                 <!-- Payment Instructions -->
-                @if($order->payment_method !== 'COD')
+                @if($order->payment_method === 'Midtrans')
+                    <div class="card mb-4 border-0 shadow-sm" style="border-radius: 10px;">
+                        <div class="card-header bg-black text-gold" style="color: var(--gold-color); font-weight: 600; border-radius: 10px 10px 0 0;">
+                            <i class="fas fa-credit-card me-2"></i> Pembayaran Online Otomatis (Midtrans)
+                        </div>
+                        <div class="card-body p-4 text-center">
+                            <div class="alert alert-info mb-4">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Metode Pembayaran Online:</strong> Gunakan tombol di bawah ini untuk membayar pesanan secara instan dan otomatis.
+                            </div>
+                            
+                            <p class="mb-4">Status Pembayaran Saat Ini: 
+                                @if($order->payment_status === 'paid')
+                                    <span class="badge bg-success">Lunas</span>
+                                @elseif($order->payment_status === 'failed')
+                                    <span class="badge bg-danger">Gagal</span>
+                                @else
+                                    <span class="badge bg-warning text-dark">Belum Dibayar</span>
+                                @endif
+                            </p>
+                            
+                            @if($order->payment_status !== 'paid')
+                                <button id="pay-button" class="btn btn-dark btn-lg py-3 px-5 text-gold border-gold" style="border: 2px solid var(--gold-color); border-radius: 0; font-weight: 700; background-color: #000;">
+                                    <i class="fas fa-wallet me-2"></i> Bayar Sekarang via Midtrans
+                                </button>
+                            @else
+                                <div class="text-success fw-bold">
+                                    <i class="fas fa-check-circle me-1"></i> Pembayaran Anda telah dikonfirmasi oleh sistem. Terima kasih!
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @elseif($order->payment_method !== 'COD')
                     <div class="card mb-4 border-0 shadow-sm" style="border-radius: 10px;">
                         <div class="card-header bg-black text-gold" style="color: var(--gold-color); font-weight: 600; border-radius: 10px 10px 0 0;">
                             <i class="fas fa-credit-card me-2"></i> Petunjuk Pembayaran Transfer Bank {{ $order->payment_method }}
@@ -61,6 +93,7 @@
                                     <li>Simpan struk atau screenshot bukti transfer Anda.</li>
                                     <li>Buka menu <a href="{{ route('orders.index') }}" class="text-gold fw-semibold">Riwayat Pesanan</a> di profil Anda.</li>
                                     <li>Pilih pesanan Anda dan unggah bukti transfer agar pesanan dapat segera diproses.</li>
+                                    <li>Jika menggunakan E-Commerce Midtrans Pembayaran otomatis, Anda tidak perlu mengunggah bukti transfer manual.</li>
                                 </ol>
                             </div>
                         </div>
@@ -148,4 +181,71 @@
         </div>
     </div>
 </div>
+
+@if($order->payment_method === 'Midtrans' && $order->payment_token)
+    @php
+        $snapUrl = config('services.midtrans.is_production') 
+            ? 'https://app.midtrans.com/snap/snap.js' 
+            : 'https://app.sandbox.midtrans.com/snap/snap.js';
+    @endphp
+    <script src="{{ $snapUrl }}" data-client-key="{{ config('services.midtrans.client_key') }}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const payButton = document.getElementById('pay-button');
+            if (payButton) {
+                function triggerSnap() {
+                    window.snap.pay('{{ $order->payment_token }}', {
+                        onSuccess: function(result){
+                            alert("Pembayaran berhasil!");
+                            window.location.reload();
+                        },
+                        onPending: function(result){
+                            alert("Menunggu pembayaran Anda.");
+                            window.location.reload();
+                        },
+                        onError: function(result){
+                            alert("Pembayaran gagal, silakan coba lagi.");
+                        },
+                        onClose: function(){
+                            alert('Anda menutup popup sebelum menyelesaikan pembayaran.');
+                        }
+                    });
+                }
+
+                payButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    triggerSnap();
+                });
+
+                // Automatically open Snap popup on load
+                triggerSnap();
+            }
+        });
+    </script>
+@endif
+
+<!-- Purchase Analytics Event -->
+@php
+    $purchaseItems = [];
+    foreach ($order->items as $item) {
+        $purchaseItems[] = [
+            'item_id' => (string)$item->product_id,
+            'item_name' => $item->product->name,
+            'item_category' => $item->product->category->name,
+            'price' => (float)$item->price,
+            'quantity' => (int)$item->quantity
+        ];
+    }
+@endphp
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        if (typeof window.trackPurchase === 'function') {
+            window.trackPurchase(
+                "{{ $order->order_code }}",
+                {{ (float)$order->total_price }},
+                @json($purchaseItems)
+            );
+        }
+    });
+</script>
 @endsection

@@ -52,7 +52,9 @@
                         @if($product->stock == 0)
                             <span class="product-badge bg-secondary text-white">Stok Habis</span>
                         @endif
-                        @if($product->discount > 0)
+                        @if($product->is_flash_sale_active)
+                            <span class="product-badge bg-warning text-dark fw-bold"><i class="fas fa-bolt me-1"></i>FLASH SALE</span>
+                        @elseif($product->discount > 0)
                             <span class="product-badge bg-danger text-white">Diskon {{ $product->discount }}%</span>
                         @endif
                         @if($product->is_featured)
@@ -62,8 +64,13 @@
                         @endif
                     </div>
                     
+                    @php
+                        $mainImg = $product->primaryImage();
+                        $mainIsExternal = $mainImg && str_starts_with($mainImg, 'http');
+                        $mainImgUrl = $mainIsExternal ? $mainImg : ($mainImg ? Storage::url($mainImg) : asset('images/no-image.jpg'));
+                    @endphp
                     <div class="card-body p-0" style="height: 500px;">
-                        <img src="{{ $product->image ? Storage::url($product->image) : asset('images/no-image.jpg') }}" 
+                        <img src="{{ $mainImgUrl }}" 
                              alt="{{ $product->name }}" 
                              class="w-100 h-100" 
                              id="mainImage"
@@ -74,21 +81,16 @@
                 <!-- Thumbnails Grid -->
                 @if($product->images->count() > 0)
                     <div class="row mt-3 g-2">
-                        <!-- Add main image as the first thumbnail -->
-                        <div class="col-3">
-                            <div class="border rounded overflow-hidden cursor-pointer thumb-wrapper active" onclick="changeImage('{{ $product->image ? Storage::url($product->image) : asset('images/no-image.jpg') }}', this)" style="height: 100px;">
-                                <img src="{{ $product->image ? Storage::url($product->image) : asset('images/no-image.jpg') }}" 
-                                     alt="Main Thumb" 
-                                     class="w-100 h-100" 
-                                     style="object-fit: cover;">
-                            </div>
-                        </div>
-                        
-                        @foreach($product->images as $image)
+                        @foreach($product->images->sortBy('sort_order') as $image)
+                            @php
+                                $thumbIsExternal = str_starts_with($image->image_path, 'http');
+                                $thumbUrl = $thumbIsExternal ? $image->image_path : Storage::url($image->image_path);
+                            @endphp
                             <div class="col-3">
-                                <div class="border rounded overflow-hidden cursor-pointer thumb-wrapper" onclick="changeImage('{{ Storage::url($image->image) }}', this)" style="height: 100px;">
-                                    <img src="{{ Storage::url($image->image) }}" 
+                                <div class="border rounded overflow-hidden cursor-pointer thumb-wrapper {{ $image->is_primary ? 'active' : '' }}" onclick="changeImage('{{ $thumbUrl }}', this)" style="height: 100px;">
+                                    <img src="{{ $thumbUrl }}" 
                                          alt="Gallery Thumb" 
+                                         loading="lazy"
                                          class="w-100 h-100" 
                                          style="object-fit: cover;">
                                 </div>
@@ -121,7 +123,17 @@
                     <h2 class="text-gold fw-bold mb-1" style="color: var(--gold-color);">
                         Rp {{ number_format($product->final_price, 0, ',', '.') }}
                     </h2>
-                    @if($product->discount > 0)
+                    @if($product->is_flash_sale_active)
+                        <span class="text-decoration-line-through text-muted me-2" style="font-size: 1.1rem;">
+                            Rp {{ number_format($product->price, 0, ',', '.') }}
+                        </span>
+                        <span class="badge bg-warning text-dark px-3 py-2 fw-bold" style="border-radius: 0;"><i class="fas fa-bolt me-1"></i>Harga Flash Sale</span>
+                        
+                        <div class="flash-sale-countdown mt-3 p-3 border border-warning rounded" style="background-color: rgba(255, 193, 7, 0.05);" data-end="{{ $product->flash_sale_end->toISOString() }}">
+                            <div class="small fw-semibold text-danger mb-1"><i class="far fa-clock me-1"></i> FLASH SALE AKAN BERAKHIR DALAM:</div>
+                            <h4 class="mb-0 fw-bold countdown-timer text-danger">00:00:00</h4>
+                        </div>
+                    @elseif($product->discount > 0)
                         <span class="text-decoration-line-through text-muted me-2" style="font-size: 1.1rem;">
                             Rp {{ number_format($product->price, 0, ',', '.') }}
                         </span>
@@ -190,9 +202,15 @@
                 </div>
                 
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-dark w-100 py-3" onclick="toggleWishlistDetail()" {{ $product->stock == 0 ? 'disabled' : '' }} style="border-radius: 0; font-weight: 600;">
-                        <i class="fas fa-heart text-danger me-2"></i> Tambah ke Wishlist
+                    <button class="btn btn-outline-dark w-50 py-3" onclick="toggleWishlistDetail()" {{ $product->stock == 0 ? 'disabled' : '' }} style="border-radius: 0; font-weight: 600;">
+                        <i class="fas fa-heart text-danger me-2"></i> Wishlist
                     </button>
+                    @php
+                        $waText = urlencode("Halo Samawa, saya mau tanya tentang produk " . $product->name . " (" . request()->url() . ")");
+                    @endphp
+                    <a href="https://wa.me/{{ config('services.social.whatsapp') }}?text={{ $waText }}" target="_blank" rel="noopener" class="btn btn-success w-50 py-3 d-flex align-items-center justify-content-center text-decoration-none text-white fw-semibold" style="border-radius: 0; background-color: #25d366; border-color: #25d366; transition: all 0.3s ease;">
+                        <i class="fab fa-whatsapp me-2"></i> Tanya via WhatsApp
+                    </a>
                 </div>
             </div>
         </div>
@@ -273,7 +291,12 @@
                         <div class="col-lg-3 col-md-4 col-sm-6 mb-4" data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}">
                             <div class="product-card" style="position: relative; overflow: visible;">
                                 <div class="product-image" style="position: relative; overflow: hidden; height: 300px; border-radius: 10px 10px 0 0;">
-                                    <img src="{{ $related->image ? Storage::url($related->image) : asset('images/no-image.jpg') }}" alt="{{ $related->name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
+                                    @php
+                                        $relImg = $related->primaryImage();
+                                        $relIsExt = $relImg && str_starts_with($relImg, 'http');
+                                        $relImgUrl = $relIsExt ? $relImg : ($relImg ? Storage::url($relImg) : asset('images/no-image.jpg'));
+                                    @endphp
+                                    <img src="{{ $relImgUrl }}" alt="{{ $related->name }}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
                                     
                                     <!-- Badges Stack -->
                                     <div class="product-badge-container">
@@ -422,6 +445,17 @@
                 // Update navbar badge count
                 if (response.cart_count > 0) {
                     $('#cart-badge-count').text(response.cart_count).removeClass('d-none');
+                }
+
+                // Analytics tracking
+                if (typeof window.trackAddToCart === 'function') {
+                    window.trackAddToCart(
+                        "{{ $product->id }}",
+                        "{{ $product->name }}",
+                        "{{ $product->category->name }}",
+                        "{{ $product->final_price }}",
+                        quantity
+                    );
                 }
             },
             error: function(xhr) {
@@ -601,5 +635,47 @@
             }
         });
     }
+
+    // Flash sale countdown logic
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('[data-end]').forEach(function(el) {
+            const end = new Date(el.getAttribute('data-end')).getTime();
+            
+            function update() {
+                const now = new Date().getTime();
+                const dist = end - now;
+                
+                if (dist < 0) {
+                    el.innerHTML = '<div class="alert alert-danger mb-0"><i class="far fa-clock me-1"></i> Flash sale telah berakhir!</div>';
+                    return;
+                }
+                
+                const hours = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((dist % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((dist % (1000 * 60)) / 1000);
+                
+                const timerEl = el.querySelector('.countdown-timer');
+                if (timerEl) {
+                    timerEl.innerText = 
+                        (hours < 10 ? '0' : '') + hours + ':' + 
+                        (minutes < 10 ? '0' : '') + minutes + ':' + 
+                        (seconds < 10 ? '0' : '') + seconds;
+                }
+            }
+            
+            update();
+            setInterval(update, 1000);
+        });
+
+        // Analytics trackViewContent
+        if (typeof window.trackViewContent === 'function') {
+            window.trackViewContent(
+                "{{ $product->id }}",
+                "{{ $product->name }}",
+                "{{ $product->category->name }}",
+                "{{ $product->final_price }}"
+            );
+        }
+    });
 </script>
 @endpush
