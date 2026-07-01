@@ -1,3 +1,7 @@
+@php
+    $products = $products ?? collect();
+@endphp
+
 @if($products->count() > 0)
     <div class="row">
         @foreach($products as $product)

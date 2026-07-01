@@ -1,5 +1,13 @@
 @extends('layouts.frontend')
 
+@php
+    $banners = $banners ?? collect();
+    $categories = $categories ?? collect();
+    $newProducts = $newProducts ?? collect();
+    $bestSellers = $bestSellers ?? collect();
+    $testimonials = $testimonials ?? collect();
+@endphp
+
 @section('title', 'Home - Samawa Fashion')
 
 @section('content')

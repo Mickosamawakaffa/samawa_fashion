@@ -1,5 +1,9 @@
 @extends('layouts.frontend')
 
+@php
+    $order = $order ?? null;
+@endphp
+
 @section('title', 'Detail Pesanan - Samawa Fashion')
 
 @section('content')

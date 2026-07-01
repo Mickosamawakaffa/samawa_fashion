@@ -11,10 +11,32 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class OrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $orders = Order::with('user')->orderByDesc('created_at')->paginate(10);
-        return view('admin.orders.index', compact('orders'));
+        $status = $request->query('status');
+        $query = Order::with('user');
+
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        $orders = $query->orderByDesc('created_at')->paginate(10);
+
+        // Counts for filter tabs
+        $countPending = Order::where('status', 'pending')->count();
+        $countProcessing = Order::where('status', 'processing')->count();
+        $countShipped = Order::where('status', 'shipped')->count();
+        $countDelivered = Order::where('status', 'delivered')->count();
+        $countCancelled = Order::where('status', 'cancelled')->count();
+
+        return view('admin.orders.index', compact(
+            'orders', 
+            'countPending', 
+            'countProcessing', 
+            'countShipped', 
+            'countDelivered',
+            'countCancelled'
+        ));
     }
 
     public function show(Order $order)
@@ -101,5 +123,65 @@ class OrderController extends Controller
         }
 
         return back()->with('success', 'Status pesanan berhasil diperbarui');
+    }
+
+    public function quickUpdateStatus(Request $request, Order $order)
+    {
+        $request->validate([
+            'status' => 'required|in:pending,processing,delivered,cancelled'
+        ]);
+
+        $status = $request->status;
+        $updateData = ['status' => $status];
+        if ($status === 'processing') {
+            $updateData['processing_at'] = $order->processing_at ?: now();
+        } elseif ($status === 'delivered') {
+            $updateData['delivered_at'] = $order->delivered_at ?: now();
+            $updateData['completed_at'] = $order->completed_at ?: now();
+            $updateData['payment_status'] = 'paid';
+        }
+
+        $order->update($updateData);
+
+        try {
+            Mail::to($order->user->email)->send(new OrderStatusUpdatedMail($order));
+        } catch (\Exception $mailEx) {
+            logger()->error('Order status quick update mail error: ' . $mailEx->getMessage());
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    public function bulkUpdateStatus(Request $request)
+    {
+        $request->validate([
+            'order_ids' => 'required|array',
+            'order_ids.*' => 'exists:orders,id',
+            'status' => 'required|in:processing,delivered,cancelled',
+        ]);
+
+        $status = $request->status;
+        $orders = Order::whereIn('id', $request->order_ids)->get();
+
+        foreach ($orders as $order) {
+            $updateData = ['status' => $status];
+            if ($status === 'processing') {
+                $updateData['processing_at'] = $order->processing_at ?: now();
+            } elseif ($status === 'delivered') {
+                $updateData['delivered_at'] = $order->delivered_at ?: now();
+                $updateData['completed_at'] = $order->completed_at ?: now();
+                $updateData['payment_status'] = 'paid';
+            }
+
+            $order->update($updateData);
+
+            try {
+                Mail::to($order->user->email)->send(new OrderStatusUpdatedMail($order));
+            } catch (\Exception $mailEx) {
+                logger()->error('Order status bulk update mail error: ' . $mailEx->getMessage());
+            }
+        }
+
+        return response()->json(['success' => true, 'count' => $orders->count()]);
     }
 }

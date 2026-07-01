@@ -657,14 +657,14 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('wishlist.index') }}">
                                 <i class="fas fa-heart"></i>
-                                @php $wishCount = auth()->user()->wishlist()->count(); @endphp
+                                @php $wishCount = auth()->check() ? auth()->user()->wishlist()->count() : 0; @endphp
                                 <span class="cart-badge {{ $wishCount == 0 ? 'd-none' : '' }}" id="wishlist-badge-count">{{ $wishCount }}</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('cart.index') }}">
                                 <i class="fas fa-shopping-cart"></i>
-                                @php $cartCount = auth()->user()->carts()->sum('quantity'); @endphp
+                                @php $cartCount = auth()->check() ? auth()->user()->carts()->sum('quantity') : 0; @endphp
                                 <span class="cart-badge {{ $cartCount == 0 ? 'd-none' : '' }}" id="cart-badge-count">{{ $cartCount }}</span>
                             </a>
                         </li>

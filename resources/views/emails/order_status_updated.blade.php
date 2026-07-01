@@ -1,3 +1,6 @@
+@php
+    $order = $order ?? null;
+@endphp
 <!DOCTYPE html>
 <html>
 <head>

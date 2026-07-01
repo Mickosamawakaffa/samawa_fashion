@@ -1,5 +1,9 @@
 @extends('layouts.frontend')
 
+@php
+    $order = $order ?? null;
+@endphp
+
 @section('title', 'Pesanan Berhasil - Samawa Fashion')
 
 @section('content')
@@ -150,8 +154,8 @@
                         @endforeach
                         
                         @php
-                            $shippingCost = $order->total_price > 500000 ? 0 : 15000;
-                            $subtotal = $order->total_price - $shippingCost;
+                            $shippingCost = $order ? (float)$order->shipping_cost : 0;
+                            $subtotal = $order ? ($order->total_price - $shippingCost) : 0;
                         @endphp
                         <div class="d-flex justify-content-between mt-3 pt-3 border-top">
                             <span class="text-muted small">Subtotal</span>
@@ -159,7 +163,7 @@
                         </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span class="text-muted small">Ongkos Kirim</span>
-                            <span class="small fw-semibold">{{ $shippingCost == 0 ? 'Gratis' : 'Rp 15.000' }}</span>
+                            <span class="small fw-semibold">{{ $shippingCost == 0 ? 'Gratis' : 'Rp ' . number_format($shippingCost, 0, ',', '.') }}</span>
                         </div>
                         <div class="d-flex justify-content-between mt-2 pt-2 border-top">
                             <strong>Total Tagihan</strong>

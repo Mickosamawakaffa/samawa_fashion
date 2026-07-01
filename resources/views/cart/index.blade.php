@@ -1,5 +1,9 @@
 @extends('layouts.frontend')
 
+@php
+    $cart = $cart ?? (object)['items' => collect(), 'total' => 0];
+@endphp
+
 @section('title', 'Keranjang - Samawa Fashion')
 
 @section('content')
@@ -93,7 +97,7 @@
                                     $appliedVoucher = session('applied_voucher');
                                     $discount = $appliedVoucher ? $appliedVoucher['discount'] : 0;
                                     $subtotal = $cart->total;
-                                    $shipping = $subtotal >= $freeShippingThreshold ? 0 : 15000;
+                                    $shipping = $subtotal >= $freeShippingMin ? 0 : 15000;
                                     $totalPrice = max(0, $subtotal - $discount) + $shipping;
                                 @endphp
                                 <div class="d-flex justify-content-between mb-3">

@@ -1,5 +1,14 @@
 @extends('layouts.frontend')
 
+@php
+    $cartItems            = $cartItems            ?? collect();
+    $cartTotal            = $cartTotal            ?? 0;
+    $freeShippingThreshold = $freeShippingThreshold ?? 500000;
+    $provinces            = $provinces            ?? collect();
+    $user                 = $user                 ?? null;
+    $defaultAddress       = $defaultAddress       ?? null;
+@endphp
+
 @section('title', 'Checkout - Samawa Fashion')
 
 @section('content')
@@ -257,6 +266,15 @@ $(document).ready(function() {
     const freeShippingThreshold = {{ \App\Models\Setting::getValue('shipping_free_min_spend', 500000) }};
     const isFreeShipping = cartTotal >= freeShippingThreshold;
 
+    // Guard: block form submit if courier not yet selected
+    $('form[action="{{ route('checkout.store') }}"]').on('submit', function(e) {
+        if ($('#selected_courier').val() === '') {
+            e.preventDefault();
+            alert('Mohon pilih Provinsi dan Kota terlebih dahulu, lalu pilih kurir pengiriman sebelum melanjutkan.');
+            return false;
+        }
+    });
+
     $('#province_select').on('change', function() {
         const provId = $(this).val();
         const provName = $('#province_select option:selected').text();
@@ -326,13 +344,9 @@ $(document).ready(function() {
                     response.rates.sort((a, b) => a.cost - b.cost);
 
                     response.rates.forEach(function(rate, idx) {
-                        const actualCost = isFreeShipping ? 0 : rate.cost;
-                        const labelCost = isFreeShipping ? 'GRATIS ONGKIR' : 'Rp ' + new Intl.NumberFormat('id-ID').format(rate.cost);
-                        const radioLabel = rate.courier + ' ' + rate.service + ' — ' + labelCost + ' (' + rate.etd + ')';
-
                         ratesHtml += `
                             <div class="col-12 mb-2">
-                                <div class="form-check p-3 border rounded shadow-sm bg-white cursor-pointer" style="border-radius: 8px;">
+                                <div class="form-check p-3 border rounded shadow-sm bg-white" style="border-radius: 8px; cursor:pointer;">
                                     <input type="radio" name="shipping_rate_radio" class="form-check-input ms-0 me-2" 
                                            id="rate_${rate.courier}_${rate.service}" 
                                            value="${rate.cost}" 
@@ -340,9 +354,10 @@ $(document).ready(function() {
                                            data-service="${rate.service}" 
                                            data-etd="${rate.etd}"
                                            ${idx === 0 ? 'checked' : ''}>
-                                    <label class="form-check-label fw-semibold cursor-pointer w-100" for="rate_${rate.courier}_${rate.service}">
+                                    <label class="form-check-label fw-semibold w-100" for="rate_${rate.courier}_${rate.service}" style="cursor:pointer;">
                                         ${isFreeShipping ? '<span class="badge bg-success me-2">GRATIS ONGKIR</span>' : ''}
-                                        ${rate.courier} ${rate.service} — <strong class="text-gold" style="color: var(--gold-color);">${isFreeShipping ? 'Rp 0' : 'Rp ' + new Intl.NumberFormat('id-ID').format(rate.cost)}</strong> (${rate.etd})
+                                        ${rate.courier} ${rate.service} — <strong class="text-gold" style="color: var(--gold-color);">${isFreeShipping ? 'GRATIS' : 'Rp ' + new Intl.NumberFormat('id-ID').format(rate.cost)}</strong>
+                                        <small class="text-muted ms-1">(${rate.etd})</small>
                                     </label>
                                 </div>
                             </div>
@@ -351,44 +366,68 @@ $(document).ready(function() {
 
                     $('#shipping-rates-list').html(ratesHtml);
                     
-                    // Auto select the first (cheapest) rate
-                    const firstRadio = $('input[name="shipping_rate_radio"]:checked');
+                    // Auto-select the first (cheapest) rate after DOM is updated
+                    const firstRadio = $('#shipping-rates-list input[name="shipping_rate_radio"]:first');
                     if (firstRadio.length > 0) {
+                        firstRadio.prop('checked', true);
                         selectRate(firstRadio);
                     }
                 } else {
-                    $('#shipping-rates-list').html('<div class="col-12 text-center text-danger py-2">Gagal memuat kurir. Silakan coba lagi.</div>');
+                    // API returned empty — show named courier fallbacks
+                    renderFallbackCouriers();
                 }
             },
             error: function(xhr) {
                 $('#shipping-loading').hide();
-                console.error('Failed to load rates:', xhr);
-                
-                // Fallback option in case of request error
-                const flatCost = 20000;
-                const actualCost = isFreeShipping ? 0 : flatCost;
-                const fallbackHtml = `
-                    <div class="col-12">
-                        <div class="form-check p-3 border rounded bg-white">
-                            <input type="radio" name="shipping_rate_radio" class="form-check-input ms-0 me-2" 
-                                   id="rate_flat" 
-                                   value="${flatCost}" 
-                                   data-courier="Flat Rate" 
-                                   data-service="Flat" 
-                                   data-etd="Akan dikonfirmasi admin"
-                                   checked>
-                            <label class="form-check-label fw-semibold cursor-pointer w-100" for="rate_flat">
-                                ${isFreeShipping ? '<span class="badge bg-success me-2">GRATIS ONGKIR</span>' : ''}
-                                Flat Rate — <strong class="text-gold" style="color: var(--gold-color);">${isFreeShipping ? 'Rp 0' : 'Rp 20.000'}</strong> (Estimasi ongkir, akan dikonfirmasi admin)
-                            </label>
-                        </div>
-                    </div>
-                `;
-                $('#shipping-rates-list').html(fallbackHtml);
-                selectRate($('#rate_flat'));
+                console.error('Failed to load rates (network/server error):', xhr);
+                // Network error — show named courier fallbacks
+                renderFallbackCouriers();
             }
         });
     });
+
+    /**
+     * Render 3 named fallback couriers when RajaOngkir API is unavailable.
+     * These still allow the admin to see which courier service was selected.
+     */
+    function renderFallbackCouriers() {
+        const fallbackRates = [
+            { courier: 'JNE',     service: 'REG', cost: 20000, etd: '2-3 hari' },
+            { courier: 'J&T',     service: 'EZ',  cost: 18000, etd: '2-4 hari' },
+            { courier: 'SiCepat', service: 'REG', cost: 19000, etd: '2-3 hari' },
+        ];
+
+        let html = '';
+        fallbackRates.forEach(function(rate, idx) {
+            const displayCost = isFreeShipping ? 'GRATIS' : 'Rp ' + new Intl.NumberFormat('id-ID').format(rate.cost);
+            const inputId = 'rate_' + rate.courier.replace(/[^a-zA-Z0-9]/g, '_') + '_' + rate.service;
+            html += `
+                <div class="col-12 mb-2">
+                    <div class="form-check p-3 border rounded shadow-sm bg-white" style="border-radius:8px; cursor:pointer;">
+                        <input type="radio" name="shipping_rate_radio" class="form-check-input ms-0 me-2"
+                               id="${inputId}" value="${rate.cost}"
+                               data-courier="${rate.courier}" data-service="${rate.service}" data-etd="${rate.etd}"
+                               ${idx === 0 ? 'checked' : ''}>
+                        <label class="form-check-label fw-semibold w-100" for="${inputId}" style="cursor:pointer;">
+                            ${isFreeShipping ? '<span class="badge bg-success me-2">GRATIS ONGKIR</span>' : ''}
+                            <strong>${rate.courier} ${rate.service}</strong> —
+                            <strong class="text-gold" style="color:var(--gold-color);">${displayCost}</strong>
+                            <small class="text-muted ms-1">(${rate.etd}, estimasi)</small>
+                        </label>
+                    </div>
+                </div>
+            `;
+        });
+
+        $('#shipping-rates-list').html(html);
+
+        // Auto-select the first fallback courier
+        const firstFallback = $('#shipping-rates-list input[name="shipping_rate_radio"]:first');
+        if (firstFallback.length > 0) {
+            firstFallback.prop('checked', true);
+            selectRate(firstFallback);
+        }
+    }
 
     $(document).on('change', 'input[name="shipping_rate_radio"]', function() {
         selectRate($(this));

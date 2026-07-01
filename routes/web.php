@@ -30,7 +30,7 @@ Route::prefix('products')->name('products.')->group(function () {
 Route::get('/kategori', [CategoryController::class, 'index'])->name('categories.index');
 Route::get('/tentang', [PageController::class, 'about'])->name('about');
 Route::get('/kontak', [PageController::class, 'contact'])->name('contact');
-Route::post('/kontak', [PageController::class, 'contactSubmit'])->name('contact.submit');
+Route::post('/kontak', [PageController::class, 'contactSubmit'])->name('contact.submit')->middleware('throttle:3,1');
 
 Route::get('/syarat-ketentuan', [PageController::class, 'terms'])->name('terms');
 Route::get('/kebijakan-privasi', [PageController::class, 'privacy'])->name('privacy');
@@ -62,7 +62,7 @@ Route::middleware('auth')->group(function () {
     // Checkout
     Route::prefix('checkout')->name('checkout.')->group(function () {
         Route::get('/', [CheckoutController::class, 'index'])->name('index');
-        Route::post('/', [CheckoutController::class, 'store'])->name('store');
+        Route::post('/', [CheckoutController::class, 'store'])->name('store')->middleware('throttle:5,1');
         Route::get('/cities', [CheckoutController::class, 'cities'])->name('cities');
         Route::post('/shipping-cost', [CheckoutController::class, 'shippingCost'])->name('shipping-cost');
         Route::get('/success/{order_code}', [CheckoutController::class, 'success'])->name('success');
@@ -71,7 +71,7 @@ Route::middleware('auth')->group(function () {
     // Payment upload
     Route::prefix('payment')->name('payment.')->group(function () {
         Route::get('/upload/{orderId}', [PaymentController::class, 'upload'])->name('upload');
-        Route::post('/store/{orderId}', [PaymentController::class, 'store'])->name('store');
+        Route::post('/store/{orderId}', [PaymentController::class, 'store'])->name('store')->middleware('throttle:10,1');
         Route::get('/success/{orderId}', [PaymentController::class, 'success'])->name('success');
     });
 
@@ -111,6 +111,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     
     Route::get('/orders/{id}/invoice', [AdminOrderController::class, 'printInvoice'])->name('orders.invoice');
     Route::put('/orders/{order}/update-status', [AdminOrderController::class, 'updateStatus'])->name('orders.updateStatus');
+    Route::patch('/orders/bulk-update-status', [AdminOrderController::class, 'bulkUpdateStatus'])->name('orders.bulkUpdateStatus');
+    Route::patch('/orders/{order}/quick-status', [AdminOrderController::class, 'quickUpdateStatus'])->name('orders.quickStatus');
     Route::resource('orders', AdminOrderController::class);
     
     Route::resource('customers', AdminCustomerController::class);

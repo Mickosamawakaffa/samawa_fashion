@@ -65,17 +65,21 @@ Use this checklist to verify the stability, performance, and security of the SAM
 
 ---
 
-## 7. Testing Fungsional — Alur Pengguna (User Flow)
-- [ ] **Registrasi & Login**: Registrasi user baru, login, dan logout berjalan tanpa hambatan.
-- [ ] **Belanja & Keranjang**: Mencari produk, memfilter kategori/harga, menambah ke keranjang, memperbarui kuantiti, menghapus item, dan total harga dihitung benar.
-- [ ] **Checkout & Pengiriman**: Memilih alamat, menghitung ongkir RajaOngkir (atau derived rates J&T/SiCepat), memilih kurir, memilih metode pembayaran, dan submit pesanan berhasil.
-- [ ] **Email & Notifikasi**: Email konfirmasi order baru terkirim dan masuk.
-- [ ] **Wishlist & Profil**: Fitur tambah/hapus wishlist, edit profil, dan ganti password berfungsi normal.
-- [ ] **Kelola Produk & Pesanan Admin**:
-  - Admin menambah/mengedit produk dengan kompresi gambar berhasil.
-  - Update status pesanan mengirim email notifikasi ke pelanggan.
-  - Admin menginput nomor resi valid, dan user bisa melacak kurir via tautan pelacakan resmi.
-  - Menyetujui testimoni memunculkannya di halaman utama (homepage).
+## 7. Testing Fungsional
+
+### 7.1 Flow Customer
+- [ ] **Register, Login, Logout**: Registrasi user baru, login, dan logout berjalan tanpa hambatan.
+- [ ] **Browse Produk, Filter, Search**: Mencari produk, memfilter kategori/harga, serta pencarian berjalan benar.
+- [ ] **Tambah ke Cart, Ubah Qty, Hapus Item**: Menambah ke keranjang belanja, mengubah jumlah kuantiti, dan menghapus item dari keranjang dengan kalkulasi harga yang benar.
+- [ ] **Checkout Lengkap**: Menyelesaikan pengisian data checkout hingga submit order sukses.
+- [ ] **Pilih SEMUA Opsi Kurir**: Memilih kurir (JNE, POS, TIKI) secara bergantian pada form checkout, pastikan ongkir diperbarui dinamis dan tersimpan dengan benar saat disubmit.
+- [ ] **Cek Riwayat Order & Detail Order**: Membuka riwayat order dan halaman detail pesanan, memastikan status progress bar dan data ongkos kirim serta total pembayaran sinkron.
+
+### 7.2 Flow Admin
+- [ ] **Tambah/Edit/Hapus Produk**: Mengelola produk (termasuk dummy & non-dummy) dan upload foto dengan kompresi berjalan aman.
+- [ ] **Update Status Order**: Mengubah status pesanan melalui semua tahapan transisi status (`pending` -> `processing` -> `shipped` -> `delivered`).
+- [ ] **Laporan Penjualan**: Laporan penjualan bulanan menampilkan data pendapatan dan total order yang sesuai dengan status pesanan lunas/delivered.
+- [ ] **Bulk Action & Quick Update**: Menguji ubah status massal & dropdown di tabel `/admin/orders` berjalan lancar, dan memblokir perubahan status "Dikirim" tanpa nomor resi (redirect ke detail).
 
 ---
 

@@ -108,12 +108,3 @@
 </div>
 @endsection
 
-@push('scripts')
-<script>
-    $(document).ready(function() {
-        $('#productsTable').DataTable({
-            order: [[0, 'desc']]
-        });
-    });
-</script>
-@endpush

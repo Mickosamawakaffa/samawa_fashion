@@ -69,8 +69,8 @@
         </table>
         
         @php
-            $shippingCost = $order->total_price > 500000 ? 0 : 15000;
-            $subtotal = $order->total_price - $shippingCost;
+            $shippingCost = $order ? (float)$order->shipping_cost : 0;
+            $subtotal = $order ? ($order->total_price - $shippingCost) : 0;
         @endphp
         
         <div class="total-box">

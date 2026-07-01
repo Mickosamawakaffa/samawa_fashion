@@ -1,6 +1,13 @@
 @extends('layouts.frontend')
 
-@section('title', $product->name . ' - Samawa Fashion')
+@php
+    $product = $product ?? null;
+    $relatedProducts = $relatedProducts ?? collect();
+    $canReview = $canReview ?? false;
+    $reviews = $reviews ?? collect();
+@endphp
+
+@section('title', ($product ? $product->name : 'Detail Produk') . ' - Samawa Fashion')
 
 @section('content')
 <div class="py-5" style="background-color: #FAF6F0;">

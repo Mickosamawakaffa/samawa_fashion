@@ -25,22 +25,26 @@ class CheckoutController extends Controller
 
     public function index()
     {
-        $cartItems = Cart::where('user_id', auth()->id())->with('product.category')->get();
+        $user = auth()->user();
 
-        if ($cartItems->count() === 0) {
-            return redirect()->route('cart.index')->with('error', 'Keranjang kosong');
+        // Load cart items with product & category relations
+        $cartItems = Cart::where('user_id', $user->id)
+            ->with(['product.category'])
+            ->get()
+            ->filter(fn($item) => $item->product !== null);
+
+        if ($cartItems->isEmpty()) {
+            return redirect()->route('cart.index')->with('error', 'Keranjang belanja kosong');
         }
 
-        $total = $cartItems->sum(function ($item) {
-            return $item->subtotal;
-        });
+        $cartTotal = $cartItems->sum(fn($item) => $item->product->final_price * $item->quantity);
 
         $cart = (object) [
             'items' => $cartItems,
-            'total' => $total
+            'total' => $cartTotal
         ];
         
-        $user = auth()->user();
+        $freeShippingThreshold = (int) Setting::getValue('shipping_free_min_spend', 500000);
 
         // Get default address from user profile addresses book
         $defaultAddress = $user->addresses()->where('is_default', true)->first();
@@ -48,7 +52,15 @@ class CheckoutController extends Controller
         // Get provinces from local DB
         $provinces = \App\Models\Province::orderBy('name')->get();
 
-        return view('checkout.index', compact('cart', 'user', 'defaultAddress', 'provinces'));
+        return view('checkout.index', compact(
+            'cart', 
+            'user', 
+            'defaultAddress', 
+            'provinces', 
+            'cartItems', 
+            'cartTotal', 
+            'freeShippingThreshold'
+        ));
     }
 
     public function cities(Request $request)
@@ -109,13 +121,11 @@ class CheckoutController extends Controller
         $rates = [];
 
         if (!$destCity || !$destCity->rajaongkir_id) {
-            // Fallback immediately to flat rate if not mapped
-            $rates[] = [
-                'courier' => 'Flat Rate',
-                'service' => 'Flat',
-                'cost' => 20000,
-                'etd' => 'Akan dikonfirmasi admin',
-                'label' => 'Flat Rate — Rp 20.000 (Estimasi ongkir, akan dikonfirmasi admin)'
+            // City not mapped to RajaOngkir — return named couriers with flat estimates
+            $rates = [
+                ['courier' => 'JNE',     'service' => 'REG', 'cost' => 20000, 'etd' => '2-3 hari', 'label' => 'JNE REG — Rp 20.000 (2-3 hari, estimasi)'],
+                ['courier' => 'J&T',     'service' => 'EZ',  'cost' => 18000, 'etd' => '2-4 hari', 'label' => 'J&T EZ — Rp 18.000 (2-4 hari, estimasi)'],
+                ['courier' => 'SiCepat', 'service' => 'REG', 'cost' => 19000, 'etd' => '2-3 hari', 'label' => 'SiCepat REG — Rp 19.000 (2-3 hari, estimasi)'],
             ];
             return response()->json([
                 'success' => true,
@@ -247,14 +257,12 @@ class CheckoutController extends Controller
             }
         }
 
-        // Fallback to flat rate Rp 20.000 if all API requests failed or returned empty
-        if (empty($rates) || ($apiFailed && count($rates) === 0)) {
-            $rates[] = [
-                'courier' => 'Flat Rate',
-                'service' => 'Flat',
-                'cost' => 20000,
-                'etd' => 'Akan dikonfirmasi admin',
-                'label' => 'Flat Rate — Rp 20.000 (Estimasi ongkir, akan dikonfirmasi admin)'
+        // Fallback to named couriers with flat estimates if API key missing or all requests failed
+        if (empty($rates)) {
+            $rates = [
+                ['courier' => 'JNE',     'service' => 'REG', 'cost' => 20000, 'etd' => '2-3 hari', 'label' => 'JNE REG — Rp 20.000 (2-3 hari, estimasi)'],
+                ['courier' => 'J&T',     'service' => 'EZ',  'cost' => 18000, 'etd' => '2-4 hari', 'label' => 'J&T EZ — Rp 18.000 (2-4 hari, estimasi)'],
+                ['courier' => 'SiCepat', 'service' => 'REG', 'cost' => 19000, 'etd' => '2-3 hari', 'label' => 'SiCepat REG — Rp 19.000 (2-3 hari, estimasi)'],
             ];
         }
 
@@ -277,9 +285,9 @@ class CheckoutController extends Controller
             'city_name' => 'required|string|max:255',
             'district' => 'required|string|max:255',
             'postal_code' => 'required|string|max:10',
-            'courier' => 'required|string|max:100',
+            'courier' => 'required|string|in:JNE,J&T,SiCepat,jne,jnt,sicepat,pos',
             'courier_service' => 'required|string|max:100',
-            'shipping_cost' => 'required|integer',
+            'shipping_cost' => 'required|integer|min:0',
             'estimated_delivery' => 'nullable|string|max:255',
             'payment_method' => 'required|string',
         ]);

@@ -1,5 +1,9 @@
 @extends('admin.layout')
 
+@php
+    $product = $product ?? null;
+@endphp
+
 @section('title', 'Detail Produk - Admin')
 
 @section('content')

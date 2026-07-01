@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Samawa Fashion - Admin')</title>
     
@@ -135,6 +136,122 @@
         .badge-delivered { background-color: #28a745; color: #fff; }
         .badge-completed { background-color: #28a745; color: #fff; }
         .badge-cancelled { background-color: #dc3545; color: #fff; }
+
+        /* Pagination Styling */
+        .pagination {
+            --gold: var(--gold-color);
+        }
+        .pagination .page-link {
+            padding: 0.5rem 0.9rem;
+            color: var(--gold);
+            background-color: var(--primary-color);
+            border-color: rgba(201, 168, 76, 0.2);
+        }
+        .pagination .page-link:hover {
+            background-color: var(--gold);
+            color: var(--primary-color);
+            border-color: var(--gold);
+        }
+        .pagination .page-item.active .page-link {
+            background: var(--gold);
+            border-color: var(--gold);
+            color: #0A0A0A;
+        }
+        .pagination .page-item.disabled .page-link {
+            background-color: #151515;
+            color: #4a4a4a;
+            border-color: rgba(201, 168, 76, 0.1);
+        }
+        .pagination svg, .pagination .icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Order Filter Tabs Styling */
+        .order-filter-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .order-filter-tabs a {
+            color: var(--cream-color);
+            background-color: var(--primary-color);
+            padding: 0.5rem 1.2rem;
+            text-decoration: none;
+            border: 1px solid rgba(201, 168, 76, 0.3);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .order-filter-tabs a:hover,
+        .order-filter-tabs a.active {
+            background-color: var(--gold-color);
+            color: var(--primary-color);
+            border-color: var(--gold-color);
+        }
+        .order-filter-tabs a span {
+            font-weight: bold;
+        }
+
+        /* Bulk Action Bar Styling */
+        .bulk-action-bar {
+            background-color: var(--primary-color);
+            color: var(--cream-color);
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            border: 1px solid var(--gold-color);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+            margin-bottom: 1.5rem;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .bulk-action-bar select {
+            background-color: #1a1a1a;
+            color: var(--cream-color);
+            border: 1px solid rgba(201, 168, 76, 0.4);
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+        }
+        .bulk-action-bar select:focus {
+            outline: none;
+            border-color: var(--gold-color);
+        }
+        .bulk-action-bar button {
+            background-color: var(--gold-color);
+            color: var(--primary-color);
+            border: none;
+            padding: 0.4rem 1.2rem;
+            border-radius: 4px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .bulk-action-bar button:hover {
+            background-color: #b8963a;
+        }
+
+        /* Quick Status Select in table */
+        .quick-status-select {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid rgba(201, 168, 76, 0.3);
+            background-color: #1a1a1a;
+            color: var(--cream-color);
+            cursor: pointer;
+        }
+        .quick-status-select:focus {
+            outline: none;
+            border-color: var(--gold-color);
+        }
     </style>
 </head>
 <body>
